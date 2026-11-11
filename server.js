@@ -57,7 +57,7 @@ async function despacharApiRecargas(playerId, producto) {
     const apiRes = await fetch('https://panel.recargasamerica.com/api/v1/order', {
       method: 'POST',
       headers: {
-        'Authorization': 'Bearer ' + RECARGAS_API_KEY,
+        'Authorization': `Bearer ${RECARGAS_API_KEY}`,
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       },
@@ -260,14 +260,11 @@ app.post('/procesar-recarga', upload.single('comprobante'), async (req, res) => 
   const producto = PRODUCTOS[prodKey];
   if (!producto) return res.redirect('/');
 
-  // Obtenemos la fecha y hora exacta en que el cliente realizó y subió su transferencia
   const fechaHoraActual = new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' });
 
-  // Intenta despachar automáticamente a la API de Recargas América
   const resultado = await despacharApiRecargas(playerId, producto);
   let estadoActual = resultado.success ? '✅ Recarga Exitosa' : '❌ Error al despachar';
 
-  // Guarda la orden completa en tu panel privado de administración con foto, folio, día y hora
   pedidosAdmin.unshift({
     id: Date.now(),
     playerId,
@@ -282,7 +279,6 @@ app.post('/procesar-recarga', upload.single('comprobante'), async (req, res) => 
   });
 
   if (resultado.success) {
-    // Pantalla de Éxito si los diamantes se enviaron al instante
     res.send(`
       <!DOCTYPE html>
       <html lang="es">
@@ -312,7 +308,6 @@ app.post('/procesar-recarga', upload.single('comprobante'), async (req, res) => 
       </html>
     `);
   } else {
-    // Pantalla de Aviso de Error con tu teléfono y contacto a soporte
     res.send(`
       <!DOCTYPE html>
       <html lang="es">
@@ -378,4 +373,9 @@ app.get('/admin', (req, res) => {
       <b>Folio / Referencia:</b> <span style="color:#00f0ff; font-weight:bold;">${p.referencia}</span> <br>
       <b>Comprobante (Foto):</b> ${p.tieneFoto} <br>
       <b>Fecha y Hora:</b> ${p.fechaHora} <br>
-      <b>Estado API:</b> <span style="color:${p.estado.includes('Exitosa') ? '#00f0ff' : '#ff3366'};">${p.
+      <b>Estado API:</b> <span style="color:${p.estado.includes('Exitosa') ? '#00f0ff' : '#ff3366'};">${p.estado}</span> <br>
+      ${p.errorDetalle !== 'Ninguno' ? `<span style="color:#ffcc00; font-size:11px;">Error: ${p.errorDetalle}</span><br>` : ''}
+      <br>
+      <form action="/admin/reintentar" method="POST" style="display:inline;">
+        <input type="hidden" name="pedidoId" value="${p.id}">
+        <button type="submit" style="background:#00b4d8; color:#fff; border:none; padding:6
