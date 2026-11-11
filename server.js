@@ -6,9 +6,9 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Tu Access Token real de Mercado Pago ya configurado aquí
-const client = new MercadoPagoConfig({ accessToken: 'TU_ACCESS_TOKEN_REAL_AQUI' });
-const RECARGAS_API_KEY = 'TU_API_KEY_DE_RECARGAS_AMERICA';
+// Credenciales reales de Monse_shop ya configuradas
+const client = new MercadoPagoConfig({ accessToken: 'APP_USR-2830416303996790-111019-74f07e59bfae3d551e9b25121b6d1911-1211795601' });
+const RECARGAS_API_KEY = 'ra_13FV9P7...dzq7';
 
 // Precios oficiales de Monse_shop
 const PRODUCTOS = {
@@ -198,4 +198,3 @@ app.get('/exito', async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log('Monse_shop corriendo en el puerto ' + PORT));
-        
