@@ -1,24 +1,35 @@
 /**
  * ============================================================================
  * TIENDA WEB MÓVIL Y PANEL ADMIN: MONSE_SHOP
- * Automatización con Webhook de Mercado Pago y Panel de Control
+ * Recargas Automáticas con Transferencia Directa, Subida de Comprobantes y Panel Admin
  * ============================================================================
  */
 
 const express = require('express');
+const multer = require('multer');
 const fetch = require('node-fetch');
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Credenciales oficiales
+// Configuración para recibir fotos de comprobantes en memoria temporal
+const upload = multer({ storage: multer.memoryStorage() });
+
+// Tus credenciales oficiales
 const RECARGAS_API_KEY = process.env.RECARGAS_API_KEY || 'ra_13Fv9P79r_13FV9P7dzq7';
-const MP_LINK_DIRECTO = 'https://link.mercadopago.com.mx/m0nseshop';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'monse123'; // Contraseña para entrar a tu panel admin
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'monse123'; // Contraseña de tu panel privado
+
+// Tus datos bancarios directos para que el cliente transfiera
+const DATOS_BANCARIOS = {
+  banco: 'Mercado Pago / BBVA / Nu',
+  tarjetaOCelular: 'Tu número de tarjeta o celular asociado',
+  clabe: 'Tu CLABE interbancaria de 18 dígitos',
+  beneficiario: 'Montserrat'
+};
 
 /**
- * Catálogo editable desde el Panel de Administración
+ * Catálogo completo sincronizado con los códigos exactos (ADS...) y el 10% de bono
  */
 let PRODUCTOS = {
   '110_diamonds': { nombre: '110 Diamantes (+10%)', precio: 15, service: 'diamantes', amount: 'ADS005' },
@@ -32,13 +43,13 @@ let PRODUCTOS = {
   'card_mensual': { nombre: 'Tarjeta Mensual', precio: 160, service: 'tarjeta', amount: 'ADS003' }
 };
 
-// Historial de pedidos recientes para que los veas en el Panel Admin
-let pedidosRecientes = [];
+// Historial de pedidos y comprobantes para tu panel de administración
+let pedidosAdmin = [];
 
 /**
- * FUNCIÓN DE DESPACHO AUTOMÁTICO A LA API DE RECARGAS AMÉRICA
+ * FUNCIÓN PARA DESPACHAR A LA API DE RECARGAS AMÉRICA
  */
-async function despacharPedidoApi(playerId, producto) {
+async function despacharApiRecargas(playerId, producto) {
   try {
     const apiRes = await fetch('https://panel.recargasamerica.com/api/v1/order', {
       method: 'POST',
@@ -53,17 +64,17 @@ async function despacharPedidoApi(playerId, producto) {
         amount: producto.amount
       })
     });
-    const data = await apiRes.json();
-    console.log('Respuesta automática API Recargas America:', data);
-    return { success: true, data };
+    const textoRes = await apiRes.text();
+    console.log('Respuesta API Recargas America:', textoRes);
+    return { success: true, respuesta: textoRes };
   } catch (e) {
-    console.error('Error al conectar con la API:', e);
+    console.error('Error al conectar con la API de recargas:', e);
     return { success: false, error: e.message };
   }
 }
 
 /**
- * TIENDA PRINCIPAL (GET /)
+ * 1. TIENDA PÚBLICA (GET /)
  */
 app.get('/', (req, res) => {
   let htmlProductos = '';
@@ -134,7 +145,7 @@ app.get('/', (req, res) => {
           </div>
         </div>
 
-        <button class="btn-pagar" onclick="iniciarCheckout()">Pagar y Despachar Automático</button>
+        <button class="btn-pagar" onclick="irATransferencia()">Ver Datos de Pago</button>
 
         <div class="soporte">
           ¿Dudas o problemas? Escríbenos al WhatsApp: <a href="https://wa.me/523521358701" target="_blank">+52 352 135 8701</a>
@@ -149,12 +160,12 @@ app.get('/', (req, res) => {
           productoSeleccionado = id;
         }
 
-        function iniciarCheckout() {
+        function irATransferencia() {
           const playerId = document.getElementById('playerId').value;
           if (!playerId) { alert('Por favor ingresa tu ID de Free Fire'); return; }
           if (!productoSeleccionado) { alert('Por favor selecciona un paquete'); return; }
 
-          window.location.href = '/checkout?playerId=' + playerId + '&prod=' + productoSeleccionado;
+          window.location.href = '/transferencia?playerId=' + playerId + '&prod=' + productoSeleccionado;
         }
       </script>
     </body>
@@ -163,20 +174,92 @@ app.get('/', (req, res) => {
 });
 
 /**
- * CHECKOUT Y REDIRECCIÓN A PAGO (GET /checkout)
+ * 2. PANTALLA DE DATOS BANCARIOS Y SUBIDA DE COMPROBANTE
  */
-app.get('/checkout', async (req, res) => {
+app.get('/transferencia', (req, res) => {
   const { playerId, prod } = req.query;
   const producto = PRODUCTOS[prod];
   if (!producto) return res.redirect('/');
 
-  // Guardamos el pedido en el historial temporal de admin como "Pendiente"
-  pedidosRecientes.unshift({
+  res.send(`
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Comprobante de Pago - Monse_shop</title>
+      <style>
+        :root { --bg-color: #0b051e; --panel-bg: #160b36; --accent-purple: #9d4edd; --neon-cyan: #00f0ff; --text-white: #fff; --text-gray: #b9b3d1; --neon-pink: #ff007f; }
+        body { background-color: var(--bg-color); color: var(--text-white); padding: 20px; font-family: sans-serif; text-align: center; }
+        .card { background: var(--panel-bg); border: 2px solid var(--accent-purple); border-radius: 15px; padding: 25px; max-width: 450px; margin: 20px auto; box-shadow: 0 0 20px rgba(157,78,221,0.3); text-align: left; }
+        h2 { color: var(--neon-cyan); margin-bottom: 15px; text-align: center; text-shadow: 0 0 8px var(--neon-cyan); }
+        p { color: var(--text-gray); font-size: 14px; margin: 8px 0; }
+        .precio-box { font-size: 28px; color: var(--neon-pink); font-weight: bold; margin: 15px 0; text-align: center; text-shadow: 0 0 10px rgba(255,0,127,0.5); }
+        .banco-box { background: #0b051e; border: 1px dashed var(--neon-cyan); padding: 15px; border-radius: 10px; margin: 15px 0; color: #fff; font-size: 14px; }
+        .banco-box b { color: var(--neon-cyan); display: block; margin-top: 4px; font-size: 16px; }
+        label { display: block; font-size: 13px; color: var(--text-gray); margin-top: 10px; }
+        input[type="text"], input[type="file"] { width: 100%; padding: 10px; background: #0b051e; border: 1px solid var(--accent-purple); border-radius: 8px; color: #fff; margin-top: 5px; }
+        .btn-confirmar { display: block; width: 100%; background: linear-gradient(45deg, #7209b7, #f72585); color: white; padding: 15px; border: none; border-radius: 10px; font-weight: bold; font-size: 16px; cursor: pointer; text-transform: uppercase; box-shadow: 0 0 15px rgba(247,37,133,0.4); text-align: center; margin-top: 20px; }
+      </style>
+    </head>
+    <body>
+      <div class="card">
+        <h2>Datos para Transferencia</h2>
+        <p>ID Free Fire: <b>${playerId}</b></p>
+        <p>Paquete: <b>${producto.nombre}</b></p>
+        <div class="precio-box">Total a pagar: $${producto.precio} MXN</div>
+
+        <div class="banco-box">
+          <p>📱 <b>Banco / App:</b> ${DATOS_BANCARIOS.banco}</p>
+          <p>💳 <b>Tarjeta / Celular:</b></p>
+          <b>${DATOS_BANCARIOS.tarjetaOCelular}</b>
+          <p style="margin-top:10px;">🔢 <b>CLABE Interbancaria:</b></p>
+          <b>${DATOS_BANCARIOS.clabe}</b>
+          <p style="margin-top:10px;">👤 <b>Beneficiario:</b> ${DATOS_BANCARIOS.beneficiario}</p>
+        </div>
+
+        <form action="/procesar-recarga" method="POST" enctype="multipart/form-data">
+          <input type="hidden" name="playerId" value="${playerId}">
+          <input type="hidden" name="prodKey" value="${prod}">
+          
+          <label>Número de referencia o folio:</label>
+          <input type="text" name="referencia" placeholder="Ej. 12345678" required>
+
+          <label>Sube foto de tu comprobante:</label>
+          <input type="file" name="comprobante" accept="image/*" required>
+
+          <button type="submit" class="btn-confirmar">Ya realicé mi transferencia</button>
+        </form>
+
+        <br><a href="/" style="color: var(--text-gray); font-size: 13px; text-decoration: underline; display:block; text-align:center;">Regresar a la tienda</a>
+      </div>
+    </body>
+    </html>
+  `);
+});
+
+/**
+ * 3. DESPACHO AUTOMÁTICO AL SUBIR COMPROBANTE Y PANTALLA DE ÉXITO
+ */
+app.post('/procesar-recarga', upload.single('comprobante'), async (req, res) => {
+  const { playerId, prodKey, referencia } = req.body;
+  const producto = PRODUCTOS[prodKey];
+  if (!producto) return res.redirect('/');
+
+  // Despacha en automático a la API de Recargas América al mandar su comprobante
+  const resultado = await despacharApiRecargas(playerId, producto);
+  let estadoActual = resultado.success ? '✅ Recarga Exitosa' : '❌ Error al despachar';
+
+  // Guarda la orden, la referencia y la foto en tu panel privado de admin
+  pedidosAdmin.unshift({
     id: Date.now(),
     playerId,
     producto: producto.nombre,
     precio: producto.precio,
-    estado: 'Pendiente de pago',
+    prodKey,
+    referencia,
+    tieneFoto: req.file ? 'Sí (Adjunta)' : 'No',
+    estado: estadoActual,
     fecha: new Date().toLocaleString()
   });
 
@@ -185,55 +268,33 @@ app.get('/checkout', async (req, res) => {
     <html lang="es">
     <head>
       <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Redirigiendo a Pago - Monse_shop</title>
+      <title>Pago Exitoso - Monse_shop</title>
       <style>
-        :root { --bg-color: #0b051e; --panel-bg: #160b36; --accent-purple: #9d4edd; --neon-cyan: #00f0ff; --text-white: #fff; --text-gray: #b9b3d1; --neon-pink: #ff007f; }
+        :root { --bg-color: #0b051e; --panel-bg: #160b36; --accent-purple: #9d4edd; --neon-cyan: #00f0ff; --text-white: #fff; --text-gray: #b9b3d1; }
         body { background-color: var(--bg-color); color: var(--text-white); padding: 20px; font-family: sans-serif; text-align: center; }
         .card { background: var(--panel-bg); border: 2px solid var(--accent-purple); border-radius: 15px; padding: 25px; max-width: 450px; margin: 40px auto; box-shadow: 0 0 20px rgba(157,78,221,0.3); }
-        h2 { color: var(--neon-cyan); margin-bottom: 15px; }
-        p { color: var(--text-gray); font-size: 15px; margin: 15px 0; }
-        .precio-box { font-size: 28px; color: var(--neon-pink); font-weight: bold; margin: 15px 0; }
-        .spinner { border: 4px solid rgba(255,255,255,0.1); width: 40px; height: 40px; border-radius: 50%; border-left-color: var(--neon-cyan); animation: spin 1s linear infinite; margin: 20px auto; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        h2 { color: var(--neon-cyan); margin-bottom: 15px; text-shadow: 0 0 8px var(--neon-cyan); }
+        p { color: var(--text-gray); font-size: 15px; margin: 15px 0; line-height: 1.5; }
+        .btn-volver { display: inline-block; background: linear-gradient(45deg, #7209b7, #f72585); color: white; padding: 12px 25px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 15px; box-shadow: 0 0 12px rgba(247,37,133,0.4); text-transform: uppercase; }
       </style>
     </head>
     <body>
       <div class="card">
-        <h2>Abriendo Enlace de Pago...</h2>
-        <p>ID Free Fire: <b>${playerId}</b></p>
-        <p>Paquete: <b>${producto.nombre}</b></p>
-        <div class="precio-box">$${producto.precio} MXN</div>
-        <div class="spinner"></div>
-        <p>Te estamos redirigiendo a Mercado Pago para completar tu transferencia o depósito de forma segura.</p>
+        <h2>⭐ ¡Pago Exitoso, Recarga Enviada! ⭐</h2>
+        <p>ID de Jugador: <b>${playerId}</b></p>
+        <p>Referencia: <b>${referencia}</b></p>
+        <p>Estado: <b>Tu comprobante fue recibido y la recarga se mandó al juego en automático.</b></p>
+        <p><i>Gracias por tu compra en Monse_shop. ¡Tus diamantes ya van en camino!</i></p>
+        <a href="/" class="btn-volver">Hacer otra recarga</a>
       </div>
-      <script>
-        setTimeout(function() {
-          window.location.href = "${MP_LINK_DIRECTO}";
-        }, 2000);
-      </script>
     </body>
     </html>
   `);
 });
 
 /**
- * WEBHOOK AUTOMÁTICO DE MERCADO PAGO (/webhook/mercadopago)
- * Cuando Mercado Pago detecta que tu cliente pagó, manda una señal aquí y despacha solo.
- */
-app.post('/webhook/mercadopago', async (req, res) => {
-  const evento = req.body;
-  console.log('Webhook recibido de Mercado Pago:', evento);
-  
-  // Aquí puedes programar la detección automática de pagos aprobados
-  // y llamar en automático a despacharPedidoApi(playerId, producto).
-
-  res.status(200).send('OK');
-});
-
-/**
- * PANEL DE ADMINISTRACIÓN SEGURO (/admin)
- * Para ver pedidos, reintentar entregas y cambiar precios / agregar productos de la API.
+ * 4. PANEL DE ADMINISTRACIÓN PRIVADO (GET /admin?pass=monse123)
+ * Tu sección secreta con el historial, la foto del comprobante de cada cliente y el botón de "Volver a intentar".
  */
 app.get('/admin', (req, res) => {
   const { pass } = req.query;
@@ -244,7 +305,7 @@ app.get('/admin', (req, res) => {
       <head><meta charset="UTF-8"><title>Login Admin</title></head>
       <body style="background:#0b051e; color:#fff; text-align:center; padding-top:50px; font-family:sans-serif;">
         <div style="background:#160b36; max-width:350px; margin:0 auto; padding:30px; border-radius:15px; border:1px solid #9d4edd;">
-          <h2>Panel Admin Monse_shop</h2>
+          <h2>Panel Privado Monse_shop</h2>
           <form method="GET" action="/admin" style="margin-top:20px;">
             <input type="password" name="pass" placeholder="Contraseña de admin" style="padding:10px; width:100%; border-radius:8px; border:1px solid #9d4edd; background:#0b051e; color:#fff; margin-bottom:15px;">
             <button type="submit" style="padding:10px; width:100%; background:#ff007f; color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">Entrar</button>
@@ -255,21 +316,30 @@ app.get('/admin', (req, res) => {
     `);
   }
 
-  let htmlListaPedidos = pedidosRecientes.map(p => `
-    <div style="background:#0b051e; padding:10px; margin-bottom:8px; border-radius:8px; font-size:13px; border-left:3px solid #00f0ff;">
-      <b>ID:</b> ${p.playerId} | <b>Paquete:</b> ${p.producto} | <b>Precio:</b> $${p.precio} MXN | <b>Estado:</b> <span style="color:#ffcc00;">${p.estado}</span> (${p.fecha})
+  let htmlPedidos = pedidosAdmin.map(p => `
+    <div style="background:#0b051e; padding:12px; margin-bottom:10px; border-radius:8px; border-left:4px solid ${p.estado.includes('Exitosa') ? '#00f0ff' : '#ff3366'}; font-size:13px; text-align:left;">
+      <b>ID Free Fire:</b> ${p.playerId} <br>
+      <b>Paquete:</b> ${p.producto} ($${p.precio} MXN) <br>
+      <b>Referencia:</b> ${p.referencia} | <b>Comprobante:</b> ${p.tieneFoto} <br>
+      <b>Fecha:</b> ${p.fecha} <br>
+      <b>Estado API:</b> <span style="color:${p.estado.includes('Exitosa') ? '#00f0ff' : '#ff3366'};">${p.estado}</span><br><br>
+      
+      <form action="/admin/reintentar" method="POST" style="display:inline;">
+        <input type="hidden" name="pedidoId" value="${p.id}">
+        <button type="submit" style="background:#00b4d8; color:#fff; border:none; padding:6px 12px; border-radius:5px; cursor:pointer; font-weight:bold;">🔄 Volver a intentar</button>
+      </form>
     </div>
   `).join('');
 
   let htmlAdminProductos = '';
   for (const [key, prod] of Object.entries(PRODUCTOS)) {
     htmlAdminProductos += `
-      <div style="background:#0b051e; padding:10px; margin-bottom:10px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
-        <div><b>${prod.nombre}</b> - $${prod.precio} MXN (Código: ${prod.amount})</div>
-        <form method="POST" action="/admin/actualizar" style="display:inline;">
+      <div style="background:#0b051e; padding:10px; margin-bottom:8px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; font-size:13px;">
+        <div><b>${prod.nombre}</b> - $${prod.precio} MXN</div>
+        <form method="POST" action="/admin/actualizar" style="display:inline; margin:0;">
           <input type="hidden" name="key" value="${key}">
-          <input type="number" name="nuevoPrecio" value="${prod.precio}" style="width:60px; padding:4px;">
-          <button type="submit" style="background:#9d4edd; color:#fff; border:none; padding:5px 10px; border-radius:5px; cursor:pointer;">Actualizar Precio</button>
+          <input type="number" name="nuevoPrecio" value="${prod.precio}" style="width:60px; padding:3px; background:#160b36; color:#fff; border:1px solid #9d4edd;">
+          <button type="submit" style="background:#9d4edd; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Cambiar</button>
         </form>
       </div>
     `;
@@ -281,22 +351,24 @@ app.get('/admin', (req, res) => {
     <head>
       <meta charset="UTF-8"><title>Panel Admin - Monse_shop</title>
       <style>
-        body { background: #0b051e; color: #fff; font-family: sans-serif; padding: 20px; }
-        .container { max-width: 700px; margin: 0 auto; background: #160b36; padding: 25px; border-radius: 15px; border: 1px solid #9d4edd; }
-        h2 { color: #00f0ff; margin-bottom: 20px; }
-        h3 { color: #ff007f; margin: 20px 0 10px 0; font-size: 16px; }
+        body { background: #0b051e; color: #fff; font-family: sans-serif; padding: 20px; text-align: center; }
+        .container { max-width: 650px; margin: 0 auto; background: #160b36; padding: 25px; border-radius: 15px; border: 1px solid #9d4edd; }
+        h2 { color: #00f0ff; margin-bottom: 20px; text-shadow: 0 0 8px #00f0ff; }
+        h3 { color: #ff007f; margin: 20px 0 10px 0; font-size: 16px; text-align: left; }
       </style>
     </head>
     <body>
       <div class="container">
         <h2>💎 Panel de Administración Monse_shop 💎</h2>
         
-        <h3>📦 Gestión de Precios y Productos</h3>
-        ${htmlAdminProductos}
+        <h3>📋 Historial de Recargas (Comprobantes y Reintentos)</h3>
+        <div style="max-height: 300px; overflow-y: auto;">
+          ${htmlPedidos || '<p style="color:#b9b3d1; text-align:left;">No hay pedidos registrados.</p>'}
+        </div>
 
-        <h3>📋 Historial de Pedidos Recientes</h3>
+        <h3>📦 Modificar Precios de Productos</h3>
         <div style="max-height: 250px; overflow-y: auto;">
-          ${htmlListaPedidos || '<p style="color:#b9b3d1;">No hay pedidos registrados todavía.</p>'}
+          ${htmlAdminProductos}
         </div>
         
         <br><a href="/" style="color:#00f0ff; text-decoration:none;">⬅ Volver a la tienda principal</a>
@@ -307,7 +379,28 @@ app.get('/admin', (req, res) => {
 });
 
 /**
- * RUTA PARA ACTUALIZAR PRECIOS DESDE EL ADMIN
+ * 5. BOTÓN DE REINTENTO DESDE EL PANEL ADMIN
+ */
+app.post('/admin/reintentar', express.urlencoded({ extended: true }), async (req, res) => {
+  const { pedidoId } = req.body;
+  const pedido = pedidosAdmin.find(p => p.id == pedidoId);
+
+  if (pedido) {
+    const producto = PRODUCTOS[pedido.prodKey];
+    const resultado = await despacharApiRecargas(pedido.playerId, producto);
+    
+    if (resultado.success) {
+      pedido.estado = '✅ Recarga Exitosa (Reintentada)';
+    } else {
+      pedido.estado = '❌ Error al reintentar en API';
+    }
+  }
+
+  res.redirect('/admin?pass=' + ADMIN_PASSWORD);
+});
+
+/**
+ * 6. ACTUALIZAR PRECIOS DESDE EL ADMIN
  */
 app.post('/admin/actualizar', express.urlencoded({ extended: true }), (req, res) => {
   const { key, nuevoPrecio } = req.body;
@@ -317,6 +410,4 @@ app.post('/admin/actualizar', express.urlencoded({ extended: true }), (req, res)
   res.redirect('/admin?pass=' + ADMIN_PASSWORD);
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log('Monse_shop admin y tienda corriendo en el puerto ' + PORT));
-  
+// Iniciali
