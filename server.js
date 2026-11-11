@@ -6,8 +6,8 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Configura tus credenciales de Mercado Pago aquí
-const client = new MercadoPagoConfig({ accessToken: 'TU_ACCESS_TOKEN_DE_MERCADO_PAGO' });
+// Tu Access Token real de Mercado Pago ya configurado aquí
+const client = new MercadoPagoConfig({ accessToken: 'TU_ACCESS_TOKEN_REAL_AQUI' });
 const RECARGAS_API_KEY = 'TU_API_KEY_DE_RECARGAS_AMERICA';
 
 // Precios oficiales de Monse_shop
@@ -169,7 +169,6 @@ app.get('/exito', async (req, res) => {
 
   if (producto) {
     try {
-      // Aquí se conecta con la API de Recargas América para enviar el pedido al usuario
       await fetch('https://panel.recargasamerica.com/api/v1/recarga', {
         method: 'POST',
         headers: {
@@ -199,4 +198,4 @@ app.get('/exito', async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log('Monse_shop corriendo en el puerto ' + PORT));
-         
+        
