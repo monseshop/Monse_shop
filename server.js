@@ -116,10 +116,29 @@ app.get('/', (req, res) => {
   `);
 });
 
-app.get('/checkout', (req, res) => {
+app.get('/checkout', async (req, res) => {
   const { playerId, prod } = req.query;
   const producto = PRODUCTOS[prod];
   if (!producto) return res.redirect('/');
+
+  // Dispara automáticamente la recarga al llegar al checkout y redirige a Mercado Pago en seguida
+  try {
+    await fetch('https://panel.recargasamerica.com/api/v1/order', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + RECARGAS_API_KEY,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        player_id: playerId,
+        service: producto.tipo,
+        amount: producto.cantidad || producto.idArticulo
+      })
+    });
+  } catch (e) {
+    console.error('Error automático al conectar con API:', e);
+  }
 
   res.send(`
     <!DOCTYPE html>
@@ -127,82 +146,37 @@ app.get('/checkout', (req, res) => {
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Confirmación - Monse_shop</title>
+      <title>Redirigiendo a Pago - Monse_shop</title>
       <style>
         :root { --bg-color: #0b051e; --panel-bg: #160b36; --accent-purple: #9d4edd; --neon-cyan: #00f0ff; --text-white: #fff; --text-gray: #b9b3d1; }
-        body { background-color: var(--bg-color); color: var(--text-white); padding: 20px; font-family: sans-serif; text-align: center; }
-        .card { background: var(--panel-bg); border: 2px solid var(--accent-purple); border-radius: 15px; padding: 25px; max-width: 450px; margin: 20px auto; box-shadow: 0 0 20px rgba(157,78,221,0.3); }
+        body { background-color: var(--bg-color); color: var(--text-white); padding: 40px; font-family: sans-serif; text-align: center; }
+        .card { background: var(--panel-bg); border: 2px solid var(--accent-purple); border-radius: 15px; padding: 30px; max-width: 450px; margin: 40px auto; box-shadow: 0 0 20px rgba(157,78,221,0.3); }
         h2 { color: var(--neon-cyan); margin-bottom: 15px; }
-        p { color: var(--text-gray); font-size: 15px; margin: 10px 0; }
-        .precio-box { font-size: 28px; color: #ff007f; font-weight: bold; margin: 15px 0; }
-        .btn { display: block; width: 100%; background: linear-gradient(45deg, #00b4d8, #0077b6); color: white; padding: 15px; border-radius: 10px; text-decoration: none; font-weight: bold; font-size: 16px; margin-top: 15px; box-shadow: 0 0 15px rgba(0,180,216,0.4); }
-        .btn-confirmar { background: linear-gradient(45deg, #7209b7, #f72585); box-shadow: 0 0 15px rgba(247,37,133,0.4); margin-top: 15px; }
+        p { color: var(--text-gray); font-size: 16px; margin: 15px 0; }
+        .precio-box { font-size: 32px; color: #ff007f; font-weight: bold; margin: 20px 0; }
+        .spinner { border: 4px solid rgba(255,255,255,0.1); width: 40px; height: 40px; border-radius: 50%; border-left-color: var(--neon-cyan); animation: spin 1s linear infinite; margin: 20px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
       </style>
     </head>
     <body>
       <div class="card">
-        <h2>Paso Final</h2>
+        <h2>Redirigiendo a tu Pago...</h2>
         <p>ID Free Fire: <b>${playerId}</b></p>
         <p>Paquete: <b>${producto.nombre}</b></p>
-        <div class="precio-box">Total: $${producto.precio} MXN</div>
-        
-        <p style="text-align: left; margin-top: 15px;"><b>Instrucciones:</b><br>
-        1. Da clic en el botón de abajo para pagar en tu link oficial de Mercado Pago.<br>
-        2. Paga la cantidad exacta de <b>$${producto.precio} MXN</b>.<br>
-        3. Regresa aquí y presiona <b>"Recibir Diamantes"</b> para despachar tu recarga en automático.</p>
-
-        <a href="${MP_LINK_DIRECTO}" target="_blank" class="btn">1. Pagar en Mercado Pago</a>
-        <a href="/ejecutar-recarga?playerId=${playerId}&prod=${prod}" class="btn btn-confirmar">2. Recibir Diamantes</a>
+        <div class="precio-box">$${producto.precio} MXN</div>
+        <div class="spinner"></div>
+        <p>Abriendo Mercado Pago para completar tu transacción de forma automática.</p>
       </div>
+      <script>
+        setTimeout(function() {
+          window.location.href = "${MP_LINK_DIRECTO}";
+        }, 2000);
+      </script>
     </body>
     </html>
   `);
 });
 
-app.get('/ejecutar-recarga', async (req, res) => {
-  const { playerId, prod } = req.query;
-  const producto = PRODUCTOS[prod];
-
-  let estadoRecarga = 'Procesando...';
-
-  if (producto) {
-    try {
-      const apiRes = await fetch('https://panel.recargasamerica.com/api/v1/recarga', {
-        method: 'POST',
-        headers: {
-          'Authorization': 'Bearer ' + RECARGAS_API_KEY,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-          player_id: playerId,
-          service: producto.tipo,
-          amount: producto.cantidad || producto.idArticulo
-        })
-      });
-      const data = await apiRes.json();
-      console.log('Respuesta Recargas America:', data);
-      if (data.success) {
-        estadoRecarga = '¡Recarga aplicada exitosamente en el juego!';
-      } else {
-        estadoRecarga = 'Aviso: ' + (data.error || 'Verificando transacción');
-      }
-    } catch (e) {
-      console.error('Error al despachar API:', e);
-      estadoRecarga = 'Error de conexión con la API';
-    }
-  }
-
-  res.send(`
-    <html lang="es"><body style="background:#0b051e; color:white; text-align:center; padding-top:50px; font-family:sans-serif;">
-      <h1 style="color:#00f0ff;">¡Recarga en Proceso! 💎</h1>
-      <p style="font-size:18px; margin-top:20px;">ID de Jugador: <b>${playerId}</b></p>
-      <p style="font-size:16px; margin-top:10px; color:#ff007f;"><b>${estadoRecarga}</b></p>
-      <br><a href="/" style="background:#9d4edd; color:white; padding:12px 25px; text-decoration:none; border-radius:8px; font-weight:bold;">Regresar a la tienda</a>
-    </body></html>
-  `);
-});
-
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log('Monse_shop corriendo en el puerto ' + PORT));
-      
+        
