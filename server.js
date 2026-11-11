@@ -8,9 +8,6 @@ app.use(express.urlencoded({ extended: true }));
 const RECARGAS_API_KEY = process.env.RECARGAS_API_KEY || 'ra_13Fv9P79r_13FV9P7...dzq7';
 const MP_LINK_DIRECTO = 'https://link.mercadopago.com.mx/m0nseshop';
 
-// Tu nueva imagen vertical personalizada desde Pinterest
-const BG_PERSONAJE = 'https://i.pinimg.com/736x/83/87/49/8387498c0d298f2441c88af13df8db13.jpg'; 
-
 const PRODUCTOS = {
   '110_diamonds': { nombre: '110 Diamantes', precio: 15, tipo: 'diamantes', cantidad: 110 },
   '341_diamonds': { nombre: '341 Diamantes', precio: 48, tipo: 'diamantes', cantidad: 341 },
@@ -33,39 +30,86 @@ app.get('/', (req, res) => {
       <title>Monse_shop - Recargas Free Fire</title>
       <style>
         :root {
-          --panel-bg: rgba(18, 7, 43, 0.85);
+          --bg-color: #0b051e;
+          --panel-bg: #160b36;
           --accent-purple: #9d4edd;
           --neon-pink: #ff007f;
           --neon-cyan: #00f0ff;
           --text-white: #ffffff;
-          --text-gray: #d1cced;
+          --text-gray: #b9b3d1;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { 
-          background: linear-gradient(rgba(11, 5, 30, 0.70), rgba(11, 5, 30, 0.85)), url('${BG_PERSONAJE}') no-repeat center center fixed;
-          background-size: cover;
+          background-color: var(--bg-color); 
           color: var(--text-white); 
           padding-bottom: 50px; 
           min-height: 100vh;
         }
-        header { background: linear-gradient(135deg, rgba(36, 0, 70, 0.9), rgba(60, 9, 108, 0.9)); padding: 25px 20px; text-align: center; border-bottom: 2px solid var(--neon-cyan); box-shadow: 0 0 20px rgba(0, 240, 255, 0.4); backdrop-filter: blur(6px); }
-        header h1 { color: var(--neon-cyan); font-size: 28px; text-shadow: 0 0 12px var(--neon-cyan); letter-spacing: 1px; }
+        header { 
+          background: linear-gradient(135deg, #240046, #3c096c); 
+          padding: 25px 20px; 
+          text-align: center; 
+          border-bottom: 2px solid var(--neon-cyan); 
+          box-shadow: 0 0 20px rgba(0, 240, 255, 0.3); 
+        }
+        header h1 { color: var(--neon-cyan); font-size: 28px; text-shadow: 0 0 10px var(--neon-cyan); }
         header p { color: var(--text-gray); font-size: 14px; margin-top: 5px; }
         .container { max-width: 500px; margin: 20px auto; padding: 0 15px; }
-        .card { background-color: var(--panel-bg); border: 1.5px solid var(--accent-purple); border-radius: 16px; padding: 22px; margin-bottom: 20px; box-shadow: 0 0 25px rgba(157, 78, 221, 0.35); backdrop-filter: blur(10px); }
-        .card h2 { font-size: 18px; margin-bottom: 15px; color: var(--neon-cyan); text-shadow: 0 0 8px rgba(0,240,255,0.6); }
+        .card { 
+          background-color: var(--panel-bg); 
+          border: 1px solid var(--accent-purple); 
+          border-radius: 15px; 
+          padding: 20px; 
+          margin-bottom: 20px; 
+          box-shadow: 0 0 15px rgba(157, 78, 221, 0.2); 
+        }
+        .card h2 { font-size: 18px; margin-bottom: 15px; color: var(--neon-cyan); }
         label { display: block; font-size: 13px; color: var(--text-gray); margin-bottom: 5px; }
-        input { width: 100%; padding: 14px; background: rgba(11, 5, 30, 0.95); border: 1.5px solid var(--accent-purple); border-radius: 10px; color: #fff; font-size: 16px; margin-bottom: 15px; }
-        input:focus { outline: none; border-color: var(--neon-cyan); box-shadow: 0 0 12px var(--neon-cyan); }
-        .grid-productos { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
-        .prod-btn { background: rgba(31, 13, 74, 0.85); border: 2px solid var(--accent-purple); border-radius: 12px; padding: 16px 10px; text-align: center; cursor: pointer; transition: all 0.25s ease; color: white; }
-        .prod-btn:hover, .prod-btn.selected { border-color: var(--neon-pink); background: rgba(55, 18, 112, 0.95); box-shadow: 0 0 18px var(--neon-pink); transform: translateY(-3px); }
+        input { 
+          width: 100%; 
+          padding: 12px; 
+          background: #0b051e; 
+          border: 1px solid var(--accent-purple); 
+          border-radius: 8px; 
+          color: #fff; 
+          font-size: 16px; 
+          margin-bottom: 15px; 
+        }
+        input:focus { outline: none; border-color: var(--neon-cyan); box-shadow: 0 0 8px var(--neon-cyan); }
+        .grid-productos { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .prod-btn { 
+          background: #1f0d4a; 
+          border: 2px solid var(--accent-purple); 
+          border-radius: 10px; 
+          padding: 15px 10px; 
+          text-align: center; 
+          cursor: pointer; 
+          transition: 0.2s; 
+          color: white; 
+        }
+        .prod-btn:hover, .prod-btn.selected { 
+          border-color: var(--neon-pink); 
+          background: #2b0e59; 
+          box-shadow: 0 0 10px var(--neon-pink); 
+        }
         .prod-btn .nombre { font-weight: bold; font-size: 14px; display: block; }
-        .prod-btn .precio { color: #00f0ff; font-size: 16px; margin-top: 6px; display: block; text-shadow: 0 0 8px rgba(0,240,255,0.5); font-weight: bold; }
-        .btn-pagar { width: 100%; background: linear-gradient(45deg, #7209b7, #f72585); border: none; padding: 16px; border-radius: 12px; color: white; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 15px; box-shadow: 0 0 25px rgba(247, 37, 133, 0.6); text-transform: uppercase; transition: 0.2s; }
-        .btn-pagar:hover { opacity: 0.95; box-shadow: 0 0 30px var(--neon-pink); }
+        .prod-btn .precio { color: #00f0ff; font-size: 16px; margin-top: 5px; display: block; }
+        .btn-pagar { 
+          width: 100%; 
+          background: linear-gradient(45deg, #7209b7, #f72585); 
+          border: none; 
+          padding: 15px; 
+          border-radius: 10px; 
+          color: white; 
+          font-size: 18px; 
+          font-weight: bold; 
+          cursor: pointer; 
+          margin-top: 15px; 
+          box-shadow: 0 0 15px rgba(247, 37, 133, 0.4); 
+          text-transform: uppercase; 
+        }
         .btn-pagar:active { transform: scale(0.98); }
-        .soporte { text-align: center; margin-top: 30px; font-size: 14px; color: var(--text-gray); background: rgba(22, 11, 54, 0.7); padding: 12px; border-radius: 10px; backdrop-filter: blur(6px); border: 1px solid rgba(157, 78, 221, 0.3); }
+        .soporte { text-align: center; margin-top: 30px; font-size: 14px; color: var(--text-gray); }
         .soporte a { color: var(--neon-cyan); text-decoration: none; font-weight: bold; }
       </style>
     </head>
@@ -97,7 +141,7 @@ app.get('/', (req, res) => {
           </div>
         </div>
 
-        <button class="btn-pagar" onclick="iniciarPago()">Pagar con Mercado Pago</button>
+        <button class="btn-pagar" onclick="iniciarPago()">Pagar con Mercado Pago / Transferencia</button>
 
         <div class="soporte">
           ¿Dudas o problemas? Escríbenos al WhatsApp: <a href="https://wa.me/523521358701" target="_blank">+52 352 135 8701</a>
@@ -130,6 +174,7 @@ app.get('/checkout', async (req, res) => {
   const producto = PRODUCTOS[prod];
   if (!producto) return res.redirect('/');
 
+  // Envía la orden en automático a la API de Recargas América al llegar al checkout
   try {
     await fetch('https://panel.recargasamerica.com/api/v1/order', {
       method: 'POST',
@@ -154,40 +199,36 @@ app.get('/checkout', async (req, res) => {
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Redirigiendo a Pago - Monse_shop</title>
+      <title>Pago y Transferencia - Monse_shop</title>
       <style>
-        :root { --panel-bg: rgba(18, 7, 43, 0.88); --accent-purple: #9d4edd; --neon-cyan: #00f0ff; --text-white: #fff; --text-gray: #d1cced; }
-        body { 
-          background: linear-gradient(rgba(11, 5, 30, 0.70), rgba(11, 5, 30, 0.85)), url('${BG_PERSONAJE}') no-repeat center center fixed;
-          background-size: cover;
-          color: var(--text-white); 
-          padding: 40px 15px; 
-          font-family: sans-serif; 
-          text-align: center; 
-          min-height: 100vh;
-        }
-        .card { background: var(--panel-bg); border: 2px solid var(--accent-purple); border-radius: 16px; padding: 30px; max-width: 450px; margin: 40px auto; box-shadow: 0 0 30px rgba(157,78,221,0.5); backdrop-filter: blur(10px); }
-        h2 { color: var(--neon-cyan); margin-bottom: 15px; text-shadow: 0 0 10px rgba(0,240,255,0.6); }
-        p { color: var(--text-gray); font-size: 16px; margin: 15px 0; }
-        .precio-box { font-size: 32px; color: #ff007f; font-weight: bold; margin: 20px 0; text-shadow: 0 0 12px rgba(255,0,127,0.6); }
-        .spinner { border: 4px solid rgba(255,255,255,0.1); width: 42px; height: 42px; border-radius: 50%; border-left-color: var(--neon-cyan); animation: spin 1s linear infinite; margin: 20px auto; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        :root { --bg-color: #0b051e; --panel-bg: #160b36; --accent-purple: #9d4edd; --neon-cyan: #00f0ff; --text-white: #fff; --text-gray: #b9b3d1; }
+        body { background-color: var(--bg-color); color: var(--text-white); padding: 20px; font-family: sans-serif; text-align: center; }
+        .card { background: var(--panel-bg); border: 2px solid var(--accent-purple); border-radius: 15px; padding: 25px; max-width: 450px; margin: 20px auto; box-shadow: 0 0 20px rgba(157,78,221,0.3); }
+        h2 { color: var(--neon-cyan); margin-bottom: 15px; }
+        p { color: var(--text-gray); font-size: 15px; margin: 10px 0; text-align: left; }
+        .precio-box { font-size: 28px; color: #ff007f; font-weight: bold; margin: 15px 0; text-align: center; }
+        .btn { display: block; width: 100%; background: linear-gradient(45deg, #7209b7, #f72585); color: white; padding: 15px; border-radius: 10px; text-decoration: none; font-weight: bold; font-size: 16px; margin-top: 20px; box-shadow: 0 0 15px rgba(247,37,133,0.4); text-transform: uppercase; }
+        .info-banco { background: #0b051e; border: 1px dashed var(--neon-cyan); padding: 12px; border-radius: 8px; margin-top: 15px; font-size: 13px; color: #00f0ff; text-align: center; }
       </style>
     </head>
     <body>
       <div class="card">
-        <h2>Redirigiendo a tu Pago...</h2>
+        <h2>Instrucciones de Pago</h2>
         <p>ID Free Fire: <b>${playerId}</b></p>
         <p>Paquete: <b>${producto.nombre}</b></p>
-        <div class="precio-box">$${producto.precio} MXN</div>
-        <div class="spinner"></div>
-        <p>Abriendo Mercado Pago para completar tu transacción de forma automática.</p>
+        <div class="precio-box">Total: $${producto.precio} MXN</div>
+        
+        <p><b>💳 Formas de pago aceptadas:</b><br>
+        Puedes transferir o depositar desde <b>BBVA, Nu, OXXO o cualquier banco</b> utilizando tu enlace directo de pago.</p>
+
+        <div class="info-banco">
+          Tu orden ha sido procesada y se aplicará de inmediato al realizar tu pago.
+        </div>
+
+        <a href="${MP_LINK_DIRECTO}" target="_blank" class="btn">Pagar Ahora ($${producto.precio} MXN)</a>
+        
+        <br><a href="/" style="color: #b9b3d1; font-size: 14px; text-decoration: underline;">Regresar a la tienda</a>
       </div>
-      <script>
-        setTimeout(function() {
-          window.location.href = "${MP_LINK_DIRECTO}";
-        }, 2000);
-      </script>
     </body>
     </html>
   `);
@@ -195,4 +236,3 @@ app.get('/checkout', async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log('Monse_shop corriendo en el puerto ' + PORT));
-  
