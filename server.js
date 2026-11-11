@@ -14,7 +14,7 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Configuración de multer para procesar fotos de comprobantes
+// Configuración de multer para procesar fotos de comprobantes en memoria
 const upload = multer({ storage: multer.memoryStorage() });
 
 // Clave API oficial de Recargas América y contraseña de Administrador
@@ -378,4 +378,4 @@ app.get('/admin', (req, res) => {
       <br>
       <form action="/admin/reintentar" method="POST" style="display:inline;">
         <input type="hidden" name="pedidoId" value="${p.id}">
-        <button type="submit" style="background:#00b4d8; color:#fff; border:none; padding:6
+        <button type="submit" style="background:#00b4d8; color:#fff; border:none
