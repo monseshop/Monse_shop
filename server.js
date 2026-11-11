@@ -8,7 +8,6 @@ app.use(express.urlencoded({ extended: true }));
 const RECARGAS_API_KEY = process.env.RECARGAS_API_KEY || 'ra_13FV9P7...dzq7';
 const MP_LINK_PAGO = 'https://link.mercadopago.com.mx/m0nseshop';
 
-// Catálogo oficial de Monse_shop
 const PRODUCTOS = {
   '110_diamonds': { nombre: '110 Diamantes', precio: 15, tipo: 'diamantes', cantidad: 110 },
   '341_diamonds': { nombre: '341 Diamantes', precio: 48, tipo: 'diamantes', cantidad: 341 },
@@ -77,15 +76,15 @@ app.get('/', (req, res) => {
         <div class="card">
           <h2>2. Selecciona tu Paquete</h2>
           <div class="grid-productos">
-            <div class="prod-btn" onclick="seleccionar('110_diamonds', '110 Diamantes', '15', this)"><span class="nombre">110 Diamantes</span><span class="precio">$15 MXN</span></div>
-            <div class="prod-btn" onclick="seleccionar('341_diamonds', '341 Diamantes', '48', this)"><span class="nombre">341 Diamantes</span><span class="precio">$48 MXN</span></div>
-            <div class="prod-btn" onclick="seleccionar('572_diamonds', '572 Diamantes', '75', this)"><span class="nombre">572 Diamantes</span><span class="precio">$75 MXN</span></div>
-            <div class="prod-btn" onclick="seleccionar('1166_diamonds', '1,166 Diamantes', '129', this)"><span class="nombre">1,166 Diamantes</span><span class="precio">$129 MXN</span></div>
-            <div class="prod-btn" onclick="seleccionar('2398_diamonds', '2,398 Diamantes', '248', this)"><span class="nombre">2,398 Diamantes</span><span class="precio">$248 MXN</span></div>
-            <div class="prod-btn" onclick="seleccionar('6160_diamonds', '6,160 Diamantes', '620', this)"><span class="nombre">6,160 Diamantes</span><span class="precio">$620 MXN</span></div>
-            <div class="prod-btn" onclick="seleccionar('card_basica', 'Tarjeta Básica', '9', this)"><span class="nombre">Tarjeta Básica</span><span class="precio">$9 MXN</span></div>
-            <div class="prod-btn" onclick="seleccionar('card_normal', 'Tarjeta Normal', '42', this)"><span class="nombre">Tarjeta Normal</span><span class="precio">$42 MXN</span></div>
-            <div class="prod-btn" onclick="seleccionar('card_mensual', 'Tarjeta Mensual', '160', this)"><span class="nombre">Tarjeta Mensual</span><span class="precio">$160 MXN</span></div>
+            <div class="prod-btn" onclick="seleccionar('110_diamonds', this)"><span class="nombre">110 Diamantes</span><span class="precio">$15 MXN</span></div>
+            <div class="prod-btn" onclick="seleccionar('341_diamonds', this)"><span class="nombre">341 Diamantes</span><span class="precio">$48 MXN</span></div>
+            <div class="prod-btn" onclick="seleccionar('572_diamonds', this)"><span class="nombre">572 Diamantes</span><span class="precio">$75 MXN</span></div>
+            <div class="prod-btn" onclick="seleccionar('1166_diamonds', this)"><span class="nombre">1,166 Diamantes</span><span class="precio">$129 MXN</span></div>
+            <div class="prod-btn" onclick="seleccionar('2398_diamonds', this)"><span class="nombre">2,398 Diamantes</span><span class="precio">$248 MXN</span></div>
+            <div class="prod-btn" onclick="seleccionar('6160_diamonds', this)"><span class="nombre">6,160 Diamantes</span><span class="precio">$620 MXN</span></div>
+            <div class="prod-btn" onclick="seleccionar('card_basica', this)"><span class="nombre">Tarjeta Básica</span><span class="precio">$9 MXN</span></div>
+            <div class="prod-btn" onclick="seleccionar('card_normal', this)"><span class="nombre">Tarjeta Normal</span><span class="precio">$42 MXN</span></div>
+            <div class="prod-btn" onclick="seleccionar('card_mensual', this)"><span class="nombre">Tarjeta Mensual</span><span class="precio">$160 MXN</span></div>
           </div>
         </div>
 
@@ -98,7 +97,7 @@ app.get('/', (req, res) => {
 
       <script>
         let productoSeleccionado = '';
-        function seleccionar(id, nombre, precio, elemento) {
+        function seleccionar(id, elemento) {
           document.querySelectorAll('.prod-btn').forEach(b => b.classList.remove('selected'));
           elemento.classList.add('selected');
           productoSeleccionado = id;
@@ -109,7 +108,6 @@ app.get('/', (req, res) => {
           if (!playerId) { alert('Por favor ingresa tu ID de Free Fire'); return; }
           if (!productoSeleccionado) { alert('Por favor selecciona un paquete'); return; }
 
-          // Redirige al checkout interno que muestra las instrucciones y botón para pagar y confirmar
           window.location.href = '/checkout?playerId=' + playerId + '&prod=' + productoSeleccionado;
         }
       </script>
@@ -118,7 +116,6 @@ app.get('/', (req, res) => {
   `);
 });
 
-// Pantalla intermedia de pago con tu link de Mercado Pago
 app.get('/checkout', (req, res) => {
   const { playerId, prod } = req.query;
   const producto = PRODUCTOS[prod];
@@ -147,7 +144,11 @@ app.get('/checkout', (req, res) => {
         <h2>Paso Final de Pago</h2>
         <p>ID Free Fire: <b>${playerId}</b></p>
         <p>Paquete: <b>${producto.nombre}</b></p>
-        <div class="precio-box">Pagar: $${producto.precio} MXN</div>  <p style="text-align: left; margin-top: 15px;"><b>Instrucciones:</b><br> 1. Da clic en el botón de abajo para ir a pagar en tu link oficial de Mercado Pago.<br> 2. Realiza tu pago por la cantidad exacta de <b>$${producto.precio} MXN</b>.<br>
+        <div class="precio-box">Pagar: $${producto.precio} MXN</div>
+        
+        <p style="text-align: left; margin-top: 15px;"><b>Instrucciones:</b><br>
+        1. Da clic en el botón de abajo para pagar en tu link oficial.<br>
+        2. Realiza tu pago por exactamente <b>$${producto.precio} MXN</b>.<br>
         3. Regresa aquí y presiona <b>"Ya pagué / Recibir Diamantes"</b>.</p>
 
         <a href="${MP_LINK_PAGO}" target="_blank" class="btn">1. Pagar en Mercado Pago ($${producto.precio} MXN)</a>
@@ -158,7 +159,6 @@ app.get('/checkout', (req, res) => {
   `);
 });
 
-// Ejecuta la recarga automática en Recargas América
 app.get('/ejecutar-recarga', async (req, res) => {
   const { playerId, prod } = req.query;
   const producto = PRODUCTOS[prod];
@@ -188,5 +188,12 @@ app.get('/ejecutar-recarga', async (req, res) => {
   res.send(`
     <html lang="es"><body style="background:#0b051e; color:white; text-align:center; padding-top:50px; font-family:sans-serif;">
       <h1 style="color:#00f0ff;">¡Recarga en Proceso! 💎</h1>
-      <p style="font-size:18px; margin-top:2
-          
+      <p style="font-size:18px; margin-top:20px;">Tus diamantes o tarjeta se están enviando automáticamente a tu ID: <b>${playerId}</b></p>
+      <p style="color:#b9b3d1; margin-top:10px;">Revisa tu juego de Free Fire en unos momentos.</p>
+      <br><a href="/" style="background:#9d4edd; color:white; padding:12px 25px; text-decoration:none; border-radius:8px; font-weight:bold;">Regresar a la tienda</a>
+    </body></html>
+  `);
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log('Monse_shop corriendo en el puerto ' + PORT));
