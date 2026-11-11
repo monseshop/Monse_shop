@@ -6,7 +6,8 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const RECARGAS_API_KEY = process.env.RECARGAS_API_KEY || 'ra_13FV9P79r_13FV9P7...dzq7';
+// Tu llave real de Recargas América configurada directamente
+const RECARGAS_API_KEY = process.env.RECARGAS_API_KEY || 'ra_13Fv9P79r_13FV9P7...dzq7';
 const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN;
 
 mercadopago.configure({
@@ -167,7 +168,7 @@ app.get('/exito', async (req, res) => {
   const { playerId, prod } = req.query;
   const producto = PRODUCTOS[prod];
 
-  let respuestaApi = 'Procesando...';
+  let estadoRecarga = 'Procesando...';
 
   if (producto) {
     try {
@@ -176,8 +177,7 @@ app.get('/exito', async (req, res) => {
         headers: {
           'Authorization': 'Bearer ' + RECARGAS_API_KEY,
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'User-Agent': 'MonseShop-App'
+          'Accept': 'application/json'
         },
         body: JSON.stringify({
           player_id: playerId,
@@ -187,17 +187,22 @@ app.get('/exito', async (req, res) => {
       });
       const data = await apiRes.json();
       console.log('Respuesta Recargas America:', data);
-      respuestaApi = JSON.stringify(data);
+      if (data.success) {
+        estadoRecarga = '¡Recarga aplicada exitosamente en el juego!';
+      } else {
+        estadoRecarga = 'Aviso: ' + (data.error || 'Verificando saldo/transacción');
+      }
     } catch (e) {
       console.error('Error al despachar API:', e);
+      estadoRecarga = 'Error de conexión con la API';
     }
   }
 
   res.send(`
     <html lang="es"><body style="background:#0b051e; color:white; text-align:center; padding-top:50px; font-family:sans-serif;">
-      <h1 style="color:#00f0ff;">¡Pago Exitoso y Recarga Solicitada! 💎</h1>
-      <p style="font-size:18px; margin-top:20px;">Tus diamantes se están enviando al ID: <b>${playerId}</b></p>
-      <p style="color:#b9b3d1; margin-top:10px; font-size:12px;">Estado API: ${respuestaApi}</p>
+      <h1 style="color:#00f0ff;">¡Pago Confirmado! 💎</h1>
+      <p style="font-size:18px; margin-top:20px;">ID de Jugador: <b>${playerId}</b></p>
+      <p style="font-size:16px; margin-top:10px; color:#ff007f;"><b>${estadoRecarga}</b></p>
       <br><a href="/" style="background:#9d4edd; color:white; padding:12px 25px; text-decoration:none; border-radius:8px; font-weight:bold;">Regresar a la tienda</a>
     </body></html>
   `);
