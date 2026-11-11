@@ -13,7 +13,7 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Configuración para recibir fotos de comprobantes en memoria temporal
+// Configuración de multer para procesar fotos de comprobantes en memoria temporal
 const upload = multer({ storage: multer.memoryStorage() });
 
 // Tus credenciales oficiales
@@ -81,8 +81,7 @@ app.get('/', (req, res) => {
   for (const [key, prod] of Object.entries(PRODUCTOS)) {
     htmlProductos += `
       <div class="prod-btn" onclick="seleccionar('${key}', this)">
-        <span class="nombre">${prod.nombre}</span>
-        <span class="precio">$${prod.precio} MXN</span>
+        <span class="nombre">${prod.nombre}</span> <span class="precio">$${prod.precio} MXN</span>
       </div>
     `;
   }
@@ -206,8 +205,7 @@ app.get('/transferencia', (req, res) => {
       <div class="card">
         <h2>Datos para Transferencia</h2>
         <p>ID Free Fire: <b>${playerId}</b></p>
-        <p>Paquete: <b>${producto.nombre}</b></p>
-        <div class="precio-box">Total a pagar: $${producto.precio} MXN</div>
+        <p>Paquete: <b>${producto.nombre}</b></p> <div class="precio-box">Total a pagar: $${producto.precio} MXN</div>
 
         <div class="banco-box">
           <p>📱 <b>Banco / App:</b> ${DATOS_BANCARIOS.banco}</p>
@@ -294,7 +292,7 @@ app.post('/procesar-recarga', upload.single('comprobante'), async (req, res) => 
 
 /**
  * 4. PANEL DE ADMINISTRACIÓN PRIVADO (GET /admin?pass=monse123)
- * Tu sección secreta con el historial, la foto del comprobante de cada cliente y el botón de "Volver a intentar".
+ * Tu sección secreta con el historial, la foto del comprobante y el botón de "Volver a intentar".
  */
 app.get('/admin', (req, res) => {
   const { pass } = req.query;
@@ -320,7 +318,7 @@ app.get('/admin', (req, res) => {
     <div style="background:#0b051e; padding:12px; margin-bottom:10px; border-radius:8px; border-left:4px solid ${p.estado.includes('Exitosa') ? '#00f0ff' : '#ff3366'}; font-size:13px; text-align:left;">
       <b>ID Free Fire:</b> ${p.playerId} <br>
       <b>Paquete:</b> ${p.producto} ($${p.precio} MXN) <br>
-      <b>Referencia:</b> ${p.referencia} | <b>Comprobante:</b> ${p.tieneFoto} <br>
+      <b>Referencia:</b> ${p.referencia} \vert{} <b>Comprobante:</b>${p.tieneFoto} <br>
       <b>Fecha:</b> ${p.fecha} <br>
       <b>Estado API:</b> <span style="color:${p.estado.includes('Exitosa') ? '#00f0ff' : '#ff3366'};">${p.estado}</span><br><br>
       
@@ -335,7 +333,7 @@ app.get('/admin', (req, res) => {
   for (const [key, prod] of Object.entries(PRODUCTOS)) {
     htmlAdminProductos += `
       <div style="background:#0b051e; padding:10px; margin-bottom:8px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; font-size:13px;">
-        <div><b>${prod.nombre}</b> - $${prod.precio} MXN</div>
+        <div><b>${prod.nombre}</b> -$${prod.precio} MXN</div>
         <form method="POST" action="/admin/actualizar" style="display:inline; margin:0;">
           <input type="hidden" name="key" value="${key}">
           <input type="number" name="nuevoPrecio" value="${prod.precio}" style="width:60px; padding:3px; background:#160b36; color:#fff; border:1px solid #9d4edd;">
@@ -360,54 +358,5 @@ app.get('/admin', (req, res) => {
     <body>
       <div class="container">
         <h2>💎 Panel de Administración Monse_shop 💎</h2>
+
         
-        <h3>📋 Historial de Recargas (Comprobantes y Reintentos)</h3>
-        <div style="max-height: 300px; overflow-y: auto;">
-          ${htmlPedidos || '<p style="color:#b9b3d1; text-align:left;">No hay pedidos registrados.</p>'}
-        </div>
-
-        <h3>📦 Modificar Precios de Productos</h3>
-        <div style="max-height: 250px; overflow-y: auto;">
-          ${htmlAdminProductos}
-        </div>
-        
-        <br><a href="/" style="color:#00f0ff; text-decoration:none;">⬅ Volver a la tienda principal</a>
-      </div>
-    </body>
-    </html>
-  `);
-});
-
-/**
- * 5. BOTÓN DE REINTENTO DESDE EL PANEL ADMIN
- */
-app.post('/admin/reintentar', express.urlencoded({ extended: true }), async (req, res) => {
-  const { pedidoId } = req.body;
-  const pedido = pedidosAdmin.find(p => p.id == pedidoId);
-
-  if (pedido) {
-    const producto = PRODUCTOS[pedido.prodKey];
-    const resultado = await despacharApiRecargas(pedido.playerId, producto);
-    
-    if (resultado.success) {
-      pedido.estado = '✅ Recarga Exitosa (Reintentada)';
-    } else {
-      pedido.estado = '❌ Error al reintentar en API';
-    }
-  }
-
-  res.redirect('/admin?pass=' + ADMIN_PASSWORD);
-});
-
-/**
- * 6. ACTUALIZAR PRECIOS DESDE EL ADMIN
- */
-app.post('/admin/actualizar', express.urlencoded({ extended: true }), (req, res) => {
-  const { key, nuevoPrecio } = req.body;
-  if (PRODUCTOS[key]) {
-    PRODUCTOS[key].precio = Number(nuevoPrecio);
-  }
-  res.redirect('/admin?pass=' + ADMIN_PASSWORD);
-});
-
-// Iniciali
