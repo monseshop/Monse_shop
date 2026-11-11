@@ -2,7 +2,6 @@
  * ============================================================================
  * TIENDA WEB MÓVIL Y PANEL ADMIN: MONSE_SHOP
  * Automatización de Recargas Free Fire en México (API Recargas América)
- * Transferencia Directa (BBVA y Nu), Comprobantes y Panel Admin
  * ============================================================================
  */
 
@@ -14,14 +13,14 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Configuración de multer para recibir las fotos de comprobantes en memoria temporal
+// Configuración de multer para recibir los comprobantes en memoria
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Credenciales y configuraciones oficiales
+// Credenciales oficiales
 const RECARGAS_API_KEY = process.env.RECARGAS_API_KEY || 'ra_13Fv9P79r_13FV9P7dzq7';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'monse123'; // Contraseña de tu panel privado
 
-// Tus datos bancarios exactos (BBVA y Nu)
+// Tus datos bancarios reales y limpios
 const DATOS_BBVA = {
   banco: 'BBVA',
   tarjeta: '4152314663647124',
@@ -34,9 +33,7 @@ const DATOS_NU = {
   beneficiario: 'Montserrat Ramirez'
 };
 
-/**
- * Catálogo oficial sincronizado con los códigos exactos del panel de Recargas América (ADS001 - ADS010)
- */
+// Catálogo oficial sincronizado con los códigos exactos (ADS001 - ADS010)
 let PRODUCTOS = {
   'card_semanal_basica': { nombre: 'Semanal Básica', precio: 9, service: 'tarjeta', amount: 'ADS001' },
   'card_semanal': { nombre: 'Tarjeta Semanal', precio: 42, service: 'tarjeta', amount: 'ADS002' },
@@ -49,12 +46,10 @@ let PRODUCTOS = {
   '5600_diamonds': { nombre: '5,600 Diamantes (+10%)', precio: 680, service: 'diamantes', amount: 'ADS010' }
 };
 
-// Historial en memoria para registrar pedidos, referencias y fotos de comprobantes
+// Historial en memoria para tu panel admin
 let pedidosAdmin = [];
 
-/**
- * FUNCIÓN CENTRAL: Despacho automático hacia la API oficial de Recargas América
- */
+// Función para despachar automáticamente a la API de Recargas América
 async function despacharApiRecargas(playerId, producto) {
   try {
     const apiRes = await fetch('https://panel.recargasamerica.com/api/v1/order', {
@@ -79,11 +74,7 @@ async function despacharApiRecargas(playerId, producto) {
   }
 }
 
-/**
- * ============================================================================
- * RUTA 1: TIENDA PÚBLICA (GET /)
- * ============================================================================
- */
+// 1. TIENDA PÚBLICA (GET /)
 app.get('/', (req, res) => {
   let htmlProductos = '';
   for (const [key, prod] of Object.entries(PRODUCTOS)) {
@@ -104,14 +95,9 @@ app.get('/', (req, res) => {
       <title>Monse_shop - Recargas Free Fire</title>
       <style>
         :root {
-          --bg-color: #0b051e;
-          --panel-bg: #160b36;
-          --accent-purple: #9d4edd;
-          --neon-pink: #ff007f;
-          --neon-cyan: #00f0ff;
-          --text-white: #ffffff;
-          --text-gray: #b9b3d1;
-          --alert-red: #ff3366;
+          --bg-color: #0b051e; --panel-bg: #160b36; --accent-purple: #9d4edd;
+          --neon-pink: #ff007f; --neon-cyan: #00f0ff; --text-white: #ffffff;
+          --text-gray: #b9b3d1; --alert-red: #ff3366;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { background-color: var(--bg-color); color: var(--text-white); padding-bottom: 50px; min-height: 100vh; }
@@ -124,28 +110,13 @@ app.get('/', (req, res) => {
         label { display: block; font-size: 13px; color: var(--text-gray); margin-bottom: 5px; }
         input { width: 100%; padding: 12px; background: #0b051e; border: 1px solid var(--accent-purple); border-radius: 8px; color: #fff; font-size: 16px; margin-bottom: 10px; }
         input:focus { outline: none; border-color: var(--neon-cyan); box-shadow: 0 0 8px var(--neon-cyan); }
-        
-        .aviso-id { 
-          font-size: 13px; 
-          color: var(--alert-red); 
-          line-height: 1.5; 
-          margin-bottom: 15px; 
-          font-weight: bold; 
-          text-align: center;
-          background: rgba(255, 51, 102, 0.1);
-          border: 1px dashed var(--alert-red);
-          padding: 10px;
-          border-radius: 8px;
-          text-shadow: 0 0 8px rgba(255, 51, 102, 0.4);
-        }
-
+        .aviso-id { font-size: 13px; color: var(--alert-red); line-height: 1.5; margin-bottom: 15px; font-weight: bold; text-align: center; background: rgba(255, 51, 102, 0.1); border: 1px dashed var(--alert-red); padding: 10px; border-radius: 8px; text-shadow: 0 0 8px rgba(255, 51, 102, 0.4); }
         .grid-productos { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
         .prod-btn { background: #1f0d4a; border: 2px solid var(--accent-purple); border-radius: 10px; padding: 15px 10px; text-align: center; cursor: pointer; transition: 0.2s; color: white; }
         .prod-btn:hover, .prod-btn.selected { border-color: var(--neon-pink); background: #2b0e59; box-shadow: 0 0 10px var(--neon-pink); }
         .prod-btn .nombre { font-weight: bold; font-size: 13px; display: block; }
         .prod-btn .precio { color: #00f0ff; font-size: 15px; margin-top: 5px; display: block; }
         .btn-pagar { width: 100%; background: linear-gradient(45deg, #7209b7, #f72585); border: none; padding: 15px; border-radius: 10px; color: white; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 15px; box-shadow: 0 0 15px rgba(247, 37, 133, 0.4); text-transform: uppercase; }
-        .btn-pagar:active { transform: scale(0.98); }
         .soporte { text-align: center; margin-top: 30px; font-size: 14px; color: var(--text-gray); }
         .soporte a { color: var(--neon-cyan); text-decoration: none; font-weight: bold; }
       </style>
@@ -201,11 +172,7 @@ app.get('/', (req, res) => {
   `);
 });
 
-/**
- * ============================================================================
- * RUTA 2: PASARELA DE TRANSFERENCIA Y COMPROBANTE (GET /transferencia)
- * ============================================================================
- */
+// 2. PANTALLA DE TRANSFERENCIA Y COMPROBANTE
 app.get('/transferencia', (req, res) => {
   const { playerId, prod } = req.query;
   const producto = PRODUCTOS[prod];
@@ -239,7 +206,6 @@ app.get('/transferencia', (req, res) => {
         <p>Paquete: <b>${producto.nombre}</b></p>
         <div class="precio-box">Total a pagar: $${producto.precio} MXN</div>
 
-        <!-- Depósito BBVA -->
         <div class="banco-box">
           <p>🌷 <b>DEPÓSITO</b> 🌷</p>
           <p>💳 Tarjeta: <b>${DATOS_BBVA.tarjeta}</b></p>
@@ -247,7 +213,6 @@ app.get('/transferencia', (req, res) => {
           <p>👩‍💻 Beneficiario: ${DATOS_BBVA.beneficiario}</p>
         </div>
 
-        <!-- Transferencia Nu -->
         <div class="banco-box">
           <p>🌷 <b>TRANSFERENCIA</b> 🌷</p>
           <p>💳 CLABE: <b>${DATOS_NU.clabe}</b></p>
@@ -275,21 +240,15 @@ app.get('/transferencia', (req, res) => {
   `);
 });
 
-/**
- * ============================================================================
- * RUTA 3: PROCESAMIENTO Y DESPACHO AUTOMÁTICO (POST /procesar-recarga)
- * ============================================================================
- */
+// 3. DESPACHO AUTOMÁTICO Y ÉXITO
 app.post('/procesar-recarga', upload.single('comprobante'), async (req, res) => {
   const { playerId, prodKey, referencia } = req.body;
   const producto = PRODUCTOS[prodKey];
   if (!producto) return res.redirect('/');
 
-  // Despacha automáticamente hacia la API de Recargas América al enviar la foto
   const resultado = await despacharApiRecargas(playerId, producto);
   let estadoActual = resultado.success ? '✅ Recarga Exitosa' : '❌ Error al despachar';
 
-  // Guarda la información en tu panel privado de administración
   pedidosAdmin.unshift({
     id: Date.now(),
     playerId,
@@ -331,11 +290,7 @@ app.post('/procesar-recarga', upload.single('comprobante'), async (req, res) => 
   `);
 });
 
-/**
- * ============================================================================
- * RUTA 4: PANEL DE ADMINISTRACIÓN PRIVADO (/admin?pass=monse123)
- * ============================================================================
- */
+// 4. PANEL DE ADMINISTRACIÓN PRIVADO
 app.get('/admin', (req, res) => {
   const { pass } = req.query;
   if (pass !== ADMIN_PASSWORD) {
@@ -411,4 +366,40 @@ app.get('/admin', (req, res) => {
           ${htmlAdminProductos}
         </div>
         
-        <br
+        <br><a href="/" style="color:#00f0ff; text-decoration:none;">⬅ Volver a la tienda principal</a>
+      </div>
+    </body>
+    </html>
+  `);
+});
+
+// 5. REINTENTO DE RECARGA
+app.post('/admin/reintentar', express.urlencoded({ extended: true }), async (req, res) => {
+  const { pedidoId } = req.body;
+  const pedido = pedidosAdmin.find(p => p.id == pedidoId);
+
+  if (pedido) {
+    const producto = PRODUCTOS[pedido.prodKey];
+    const resultado = await despacharApiRecargas(pedido.playerId, producto);
+    
+    if (resultado.success) {
+      pedido.estado = '✅ Recarga Exitosa (Reintentada)';
+    } else {
+      pedido.estado = '❌ Error al reintentar en API';
+    }
+  }
+
+  res.redirect('/admin?pass=' + ADMIN_PASSWORD);
+});
+
+// 6. ACTUALIZAR PRECIOS
+app.post('/admin/actualizar', express.urlencoded({ extended: true }), (req, res) => {
+  const { key, nuevoPrecio } = req.body;
+  if (PRODUCTOS[key]) {
+    PRODUCTOS[key].precio = Number(nuevoPrecio);
+  }
+  res.redirect('/admin?pass=' + ADMIN_PASSWORD);
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log('Monse_shop corriendo exitosamente en el puerto ' + PORT));
