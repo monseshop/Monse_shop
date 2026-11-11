@@ -8,8 +8,8 @@ app.use(express.urlencoded({ extended: true }));
 const RECARGAS_API_KEY = process.env.RECARGAS_API_KEY || 'ra_13Fv9P79r_13FV9P7...dzq7';
 const MP_LINK_DIRECTO = 'https://link.mercadopago.com.mx/m0nseshop';
 
-// Tu imagen de personaje como fondo oficial
-const BG_PERSONAJE = 'https://i.ibb.co/6PzJ7Q1/1000201299.jpg'; 
+// Tu nueva imagen vertical personalizada con detalles sutiles de flores
+const BG_PERSONAJE = 'https://i.pinimg.com/736x/83/87/49/8387498c0d298f2441c88af13df8db13.jpg'; 
 
 const PRODUCTOS = {
   '110_diamonds': { nombre: '110 Diamantes', precio: 15, tipo: 'diamantes', cantidad: 110 },
