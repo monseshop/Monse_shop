@@ -88,7 +88,7 @@ app.get('/', (req, res) => {
           </div>
         </div>
 
-        <button class="btn-pagar" onclick="iniciarPago()">Pagar con Mercado Pago</button>
+        <button class="btn-pagar" onclick="iniciarPago()">Continuar con el Pago</button>
 
         <div class="soporte">
           ¿Dudas o problemas? Escríbenos al WhatsApp: <a href="https://wa.me/523521358701" target="_blank">+52 352 135 8701</a>
@@ -103,22 +103,12 @@ app.get('/', (req, res) => {
           productoSeleccionado = id;
         }
 
-        async function iniciarPago() {
+        function iniciarPago() {
           const playerId = document.getElementById('playerId').value;
           if (!playerId) { alert('Por favor ingresa tu ID de Free Fire'); return; }
           if (!productoSeleccionado) { alert('Por favor selecciona un paquete'); return; }
 
-          const res = await fetch('/crear-preferencia', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ playerId, productoId: productoSeleccionado })
-          });
-          const data = await res.json();
-          if (data.init_point) {
-            window.location.href = data.init_point;
-          } else {
-            alert('Error al procesar el pago. Intenta de nuevo.');
-          }
+          window.location.href = '/checkout?playerId=' + playerId + '&prod=' + productoSeleccionado;
         }
       </script>
     </body>
@@ -126,34 +116,64 @@ app.get('/', (req, res) => {
   `);
 });
 
-// Ruta optimizada de pago que redirige correctamente a la pasarela o simulación de cobro sin errores de políticas
-app.post('/crear-preferencia', async (req, res) => {
-  try {
-    const { playerId, productoId } = req.body;
-    const producto = PRODUCTOS[productoId];
-    if (!producto) return res.status(400).json({ error: 'Producto no válido' });
+// Pantalla de pago donde se muestran las instrucciones y métodos para depositar
+app.get('/checkout', (req, res) => {
+  const { playerId, prod } = req.query;
+  const producto = PRODUCTOS[prod];
+  if (!producto) return res.redirect('/');
 
-    // Enlace directo de pasarela simulada/respaldo conectada al flujo de éxito
-    const checkoutUrl = 'https://' + req.get('host') + '/exito?playerId=' + playerId + '&prod=' + productoId;
-    res.json({ init_point: checkoutUrl });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Error al procesar la pasarela' });
-  }
+  res.send(`
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Checkout - Monse_shop</title>
+      <style>
+        :root { --bg-color: #0b051e; --panel-bg: #160b36; --accent-purple: #9d4edd; --neon-cyan: #00f0ff; --text-white: #fff; --text-gray: #b9b3d1; }
+        body { background-color: var(--bg-color); color: var(--text-white); padding: 20px; font-family: sans-serif; text-align: center; }
+        .card { background: var(--panel-bg); border: 2px solid var(--accent-purple); border-radius: 15px; padding: 25px; max-width: 450px; margin: 20px auto; box-shadow: 0 0 20px rgba(157,78,221,0.3); }
+        h2 { color: var(--neon-cyan); margin-bottom: 15px; }
+        p { color: var(--text-gray); font-size: 15px; margin: 10px 0; }
+        .precio-box { font-size: 26px; color: #ff007f; font-weight: bold; margin: 15px 0; }
+        .btn { display: block; width: 100%; background: linear-gradient(45deg, #7209b7, #f72585); color: white; padding: 15px; border-radius: 10px; text-decoration: none; font-weight: bold; font-size: 16px; margin-top: 20px; box-shadow: 0 0 15px rgba(247,37,133,0.4); }
+        .btn-wa { background: #25d366; box-shadow: 0 0 15px rgba(37,211,102,0.4); margin-top: 10px; }
+      </style>
+    </head>
+    <body>
+      <div class="card">
+        <h2>Resumen de tu Orden</h2>
+        <p>ID Free Fire: <b>${playerId}</b></p>
+        <p>Producto: <b>${producto.nombre}</b></p>
+        <div class="precio-box">Total: $${producto.precio} MXN</div>
+        
+        <p style="text-align: left; margin-top: 20px;"><b>Instrucciones de Pago:</b><br>
+        1. Realiza tu pago o transferencia por la cantidad exacta.<br>
+        2. Envía tu comprobante por WhatsApp para validar y despachar tus diamantes de inmediato al instante.</p>
+
+        <a href="/ejecutar-recarga?playerId=${playerId}&prod=${prod}" class="btn">Ya pagué / Enviar Recarga Automática</a>
+        <a href="https://wa.me/523521358701?text=Hola,%20hice%20un%20pedido%20para%20el%20ID%20${playerId}%20de%20${producto.nombre}%20por%20$%${producto.precio}%20MXN.%20Adjunto%20mi%20comprobante:" class="btn btn-wa" target="_blank">Enviar comprobante por WhatsApp</a>
+      </div>
+    </body>
+    </html>
+  `);
 });
 
-// Ruta de éxito: Despacha automáticamente la API de Recargas América
-app.get('/exito', async (req, res) => {
+// Ruta que ejecuta la API de Recargas América y muestra el éxito
+app.get('/ejecutar-recarga', async (req, res) => {
   const { playerId, prod } = req.query;
   const producto = PRODUCTOS[prod];
 
+  let statusRecarga = 'Enviando recarga...';
+
   if (producto) {
     try {
-      await fetch('https://panel.recargasamerica.com/api/v1/recarga', {
+      const apiRes = await fetch('https://panel.recargasamerica.com/api/v1/recarga', {
         method: 'POST',
         headers: {
           'Authorization': 'Bearer ' + RECARGAS_API_KEY,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
         body: JSON.stringify({
           player_id: playerId,
@@ -161,6 +181,8 @@ app.get('/exito', async (req, res) => {
           amount: producto.cantidad || producto.idArticulo
         })
       });
+      const data = await apiRes.json();
+      console.log('Respuesta Recargas America:', data);
     } catch (e) {
       console.error('Error al despachar API:', e);
     }
@@ -168,7 +190,7 @@ app.get('/exito', async (req, res) => {
 
   res.send(`
     <html lang="es"><body style="background:#0b051e; color:white; text-align:center; padding-top:50px; font-family:sans-serif;">
-      <h1 style="color:#00f0ff;">¡Pago Exitoso! 💎</h1>
+      <h1 style="color:#00f0ff;">¡Recarga en Proceso! 💎</h1>
       <p style="font-size:18px; margin-top:20px;">Tus diamantes o tarjeta se están enviando a tu ID: <b>${playerId}</b></p>
       <p style="color:#b9b3d1; margin-top:10px;">Revisa tu juego en unos momentos.</p>
       <br><a href="/" style="background:#9d4edd; color:white; padding:12px 25px; text-decoration:none; border-radius:8px; font-weight:bold;">Regresar a la tienda</a>
@@ -178,3 +200,4 @@ app.get('/exito', async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log('Monse_shop corriendo en el puerto ' + PORT));
+           
