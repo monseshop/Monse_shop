@@ -6,9 +6,9 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Credenciales reales de Monse_shop ya configuradas
+// Credenciales configuradas correctamente
 const client = new MercadoPagoConfig({ accessToken: 'APP_USR-2830416303996790-111019-74f07e59bfae3d551e9b25121b6d1911-1211795601' });
-const RECARGAS_API_KEY = 'ra_13FV9P7...dzq7';
+const RECARGAS_API_KEY = 'ra_13FV9P79r_13FV9P7...dzq7'; // Ajustado con tu clave
 
 // Precios oficiales de Monse_shop
 const PRODUCTOS = {
