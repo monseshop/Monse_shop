@@ -8,7 +8,7 @@ app.use(express.urlencoded({ extended: true }));
 const RECARGAS_API_KEY = process.env.RECARGAS_API_KEY || 'ra_13Fv9P79r_13FV9P7...dzq7';
 const MP_LINK_DIRECTO = 'https://link.mercadopago.com.mx/m0nseshop';
 
-// Tu nueva imagen vertical personalizada con detalles sutiles de flores
+// Tu nueva imagen vertical personalizada desde Pinterest
 const BG_PERSONAJE = 'https://i.pinimg.com/736x/83/87/49/8387498c0d298f2441c88af13df8db13.jpg'; 
 
 const PRODUCTOS = {
@@ -195,3 +195,4 @@ app.get('/checkout', async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log('Monse_shop corriendo en el puerto ' + PORT));
+  
