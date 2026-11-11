@@ -1,7 +1,8 @@
 /**
  * ============================================================================
  * TIENDA WEB MÓVIL Y PANEL ADMIN: MONSE_SHOP
- * Recargas Automáticas con Transferencia Directa, Subida de Comprobantes y Panel Admin
+ * Automatización de Recargas Free Fire en México (API Recargas América)
+ * Transferencia Directa (BBVA y Nu), Subida de Comprobantes y Panel Admin
  * ============================================================================
  */
 
@@ -13,41 +14,46 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Configuración de multer para procesar fotos de comprobantes en memoria temporal
+// Configuración de multer para recibir las fotos de comprobantes de los clientes en memoria temporal
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Tus credenciales oficiales
+// Credenciales y configuraciones oficiales
 const RECARGAS_API_KEY = process.env.RECARGAS_API_KEY || 'ra_13Fv9P79r_13FV9P7dzq7';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'monse123'; // Contraseña de tu panel privado
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'monse123'; // Contraseña de acceso a tu panel privado
 
-// Tus datos bancarios directos para que el cliente transfiera
-const DATOS_BANCARIOS = {
-  banco: 'Mercado Pago / BBVA / Nu',
-  tarjetaOCelular: 'Tu número de tarjeta o celular asociado',
-  clabe: 'Tu CLABE interbancaria de 18 dígitos',
-  beneficiario: 'Montserrat'
+// Tus datos bancarios reales para transferencias y depósitos
+const DATOS_BBVA = {
+  banco: 'BBVA',
+  tarjeta: '4152314663647124',
+  beneficiario: 'Montserrat Ramirez'
+};
+
+const DATOS_NU = {
+  banco: 'Nu',
+  clabe: '638180010008913497',
+  beneficiario: 'Montserrat Ramirez'
 };
 
 /**
- * Catálogo completo sincronizado con los códigos exactos (ADS...) y el 10% de bono
+ * Catálogo oficial sincronizado con los códigos exactos del panel de Recargas América (ADS001 - ADS010)
  */
 let PRODUCTOS = {
+  'card_semanal_basica': { nombre: 'Semanal Básica', precio: 9, service: 'tarjeta', amount: 'ADS001' },
+  'card_semanal': { nombre: 'Tarjeta Semanal', precio: 42, service: 'tarjeta', amount: 'ADS002' },
+  'card_mensual': { nombre: 'Tarjeta Mensual', precio: 160, service: 'tarjeta', amount: 'ADS003' },
   '110_diamonds': { nombre: '110 Diamantes (+10%)', precio: 15, service: 'diamantes', amount: 'ADS005' },
   '310_diamonds': { nombre: '310 Diamantes (+10%)', precio: 43, service: 'diamantes', amount: 'ADS006' },
   '520_diamonds': { nombre: '520 Diamantes (+10%)', precio: 70, service: 'diamantes', amount: 'ADS007' },
   '1000_diamonds': { nombre: '1,000 Diamantes (+10%)', precio: 135, service: 'diamantes', amount: 'ADS008' },
   '2180_diamonds': { nombre: '2,180 Diamantes (+10%)', precio: 280, service: 'diamantes', amount: 'ADS009' },
-  '5600_diamonds': { nombre: '5,600 Diamantes (+10%)', precio: 680, service: 'diamantes', amount: 'ADS010' },
-  'card_semanal_basica': { nombre: 'Semanal Básica', precio: 9, service: 'tarjeta', amount: 'ADS001' },
-  'card_semanal': { nombre: 'Tarjeta Semanal', precio: 42, service: 'tarjeta', amount: 'ADS002' },
-  'card_mensual': { nombre: 'Tarjeta Mensual', precio: 160, service: 'tarjeta', amount: 'ADS003' }
+  '5600_diamonds': { nombre: '5,600 Diamantes (+10%)', precio: 680, service: 'diamantes', amount: 'ADS010' }
 };
 
-// Historial de pedidos y comprobantes para tu panel de administración
+// Historial en memoria para registrar pedidos, referencias y fotos de comprobantes
 let pedidosAdmin = [];
 
 /**
- * FUNCIÓN PARA DESPACHAR A LA API DE RECARGAS AMÉRICA
+ * FUNCIÓN CENTRAL: Despacho automático hacia la API oficial de Recargas América
  */
 async function despacharApiRecargas(playerId, producto) {
   try {
@@ -65,23 +71,27 @@ async function despacharApiRecargas(playerId, producto) {
       })
     });
     const textoRes = await apiRes.text();
-    console.log('Respuesta API Recargas America:', textoRes);
+    console.log('Respuesta de API Recargas America:', textoRes);
     return { success: true, respuesta: textoRes };
   } catch (e) {
-    console.error('Error al conectar con la API de recargas:', e);
+    console.error('Error al conectar con la API de Recargas América:', e);
     return { success: false, error: e.message };
   }
 }
 
 /**
- * 1. TIENDA PÚBLICA (GET /)
+ * ============================================================================
+ * RUTA 1: TIENDA PÚBLICA (GET /)
+ * Catálogo, diseño morado neón, campo de ID y advertencia decorada con corazones y estrellas.
+ * ============================================================================
  */
 app.get('/', (req, res) => {
   let htmlProductos = '';
   for (const [key, prod] of Object.entries(PRODUCTOS)) {
     htmlProductos += `
       <div class="prod-btn" onclick="seleccionar('${key}', this)">
-        <span class="nombre">${prod.nombre}</span> <span class="precio">$${prod.precio} MXN</span>
+        <span class="nombre">${prod.nombre}</span>
+        <span class="precio">$${prod.precio} MXN</span>
       </div>
     `;
   }
@@ -95,11 +105,16 @@ app.get('/', (req, res) => {
       <title>Monse_shop - Recargas Free Fire</title>
       <style>
         :root {
-          --bg-color: #0b051e; --panel-bg: #160b36; --accent-purple: #9d4edd;
-          --neon-pink: #ff007f; --neon-cyan: #00f0ff; --text-white: #ffffff;
-          --text-gray: #b9b3d1; --alert-red: #ff3366;
+          --bg-color: #0b051e;
+          --panel-bg: #160b36;
+          --accent-purple: #9d4edd;
+          --neon-pink: #ff007f;
+          --neon-cyan: #00f0ff;
+          --text-white: #ffffff;
+          --text-gray: #b9b3d1;
+          --alert-red: #ff3366;
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { background-color: var(--bg-color); color: var(--text-white); padding-bottom: 50px; min-height: 100vh; }
         header { background: linear-gradient(135deg, #240046, #3c096c); padding: 25px 20px; text-align: center; border-bottom: 2px solid var(--neon-cyan); box-shadow: 0 0 20px rgba(0, 240, 255, 0.3); }
         header h1 { color: var(--neon-cyan); font-size: 28px; text-shadow: 0 0 10px var(--neon-cyan); }
@@ -110,13 +125,28 @@ app.get('/', (req, res) => {
         label { display: block; font-size: 13px; color: var(--text-gray); margin-bottom: 5px; }
         input { width: 100%; padding: 12px; background: #0b051e; border: 1px solid var(--accent-purple); border-radius: 8px; color: #fff; font-size: 16px; margin-bottom: 10px; }
         input:focus { outline: none; border-color: var(--neon-cyan); box-shadow: 0 0 8px var(--neon-cyan); }
-        .aviso-id { font-size: 13px; color: var(--alert-red); line-height: 1.5; margin-bottom: 15px; font-weight: bold; text-align: center; background: rgba(255, 51, 102, 0.1); border: 1px dashed var(--alert-red); padding: 10px; border-radius: 8px; text-shadow: 0 0 8px rgba(255, 51, 102, 0.4); }
+        
+        .aviso-id { 
+          font-size: 13px; 
+          color: var(--alert-red); 
+          line-height: 1.5; 
+          margin-bottom: 15px; 
+          font-weight: bold; 
+          text-align: center;
+          background: rgba(255, 51, 102, 0.1);
+          border: 1px dashed var(--alert-red);
+          padding: 10px;
+          border-radius: 8px;
+          text-shadow: 0 0 8px rgba(255, 51, 102, 0.4);
+        }
+
         .grid-productos { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
         .prod-btn { background: #1f0d4a; border: 2px solid var(--accent-purple); border-radius: 10px; padding: 15px 10px; text-align: center; cursor: pointer; transition: 0.2s; color: white; }
         .prod-btn:hover, .prod-btn.selected { border-color: var(--neon-pink); background: #2b0e59; box-shadow: 0 0 10px var(--neon-pink); }
         .prod-btn .nombre { font-weight: bold; font-size: 13px; display: block; }
         .prod-btn .precio { color: #00f0ff; font-size: 15px; margin-top: 5px; display: block; }
         .btn-pagar { width: 100%; background: linear-gradient(45deg, #7209b7, #f72585); border: none; padding: 15px; border-radius: 10px; color: white; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 15px; box-shadow: 0 0 15px rgba(247, 37, 133, 0.4); text-transform: uppercase; }
+        .btn-pagar:active { transform: scale(0.98); }
         .soporte { text-align: center; margin-top: 30px; font-size: 14px; color: var(--text-gray); }
         .soporte a { color: var(--neon-cyan); text-decoration: none; font-weight: bold; }
       </style>
@@ -144,7 +174,7 @@ app.get('/', (req, res) => {
           </div>
         </div>
 
-        <button class="btn-pagar" onclick="irATransferencia()">Ver Datos de Pago</button>
+        <button class="btn-pagar" onclick="irATransferencia()">Continuar al Pago</button>
 
         <div class="soporte">
           ¿Dudas o problemas? Escríbenos al WhatsApp: <a href="https://wa.me/523521358701" target="_blank">+52 352 135 8701</a>
@@ -173,7 +203,10 @@ app.get('/', (req, res) => {
 });
 
 /**
- * 2. PANTALLA DE DATOS BANCARIOS Y SUBIDA DE COMPROBANTE
+ * ============================================================================
+ * RUTA 2: PASARELA DE TRANSFERENCIA Y COMPROBANTE (GET /transferencia)
+ * Muestra las cuentas de BBVA y Nu y el formulario para subir la foto y referencia.
+ * ============================================================================
  */
 app.get('/transferencia', (req, res) => {
   const { playerId, prod } = req.query;
@@ -194,8 +227,8 @@ app.get('/transferencia', (req, res) => {
         h2 { color: var(--neon-cyan); margin-bottom: 15px; text-align: center; text-shadow: 0 0 8px var(--neon-cyan); }
         p { color: var(--text-gray); font-size: 14px; margin: 8px 0; }
         .precio-box { font-size: 28px; color: var(--neon-pink); font-weight: bold; margin: 15px 0; text-align: center; text-shadow: 0 0 10px rgba(255,0,127,0.5); }
-        .banco-box { background: #0b051e; border: 1px dashed var(--neon-cyan); padding: 15px; border-radius: 10px; margin: 15px 0; color: #fff; font-size: 14px; }
-        .banco-box b { color: var(--neon-cyan); display: block; margin-top: 4px; font-size: 16px; }
+        .banco-box { background: #0b051e; border: 1px dashed var(--neon-cyan); padding: 12px; border-radius: 10px; margin: 10px 0; color: #fff; font-size: 13px; }
+        .banco-box b { color: var(--neon-cyan); display: block; margin-top: 3px; font-size: 15px; }
         label { display: block; font-size: 13px; color: var(--text-gray); margin-top: 10px; }
         input[type="text"], input[type="file"] { width: 100%; padding: 10px; background: #0b051e; border: 1px solid var(--accent-purple); border-radius: 8px; color: #fff; margin-top: 5px; }
         .btn-confirmar { display: block; width: 100%; background: linear-gradient(45deg, #7209b7, #f72585); color: white; padding: 15px; border: none; border-radius: 10px; font-weight: bold; font-size: 16px; cursor: pointer; text-transform: uppercase; box-shadow: 0 0 15px rgba(247,37,133,0.4); text-align: center; margin-top: 20px; }
@@ -203,17 +236,23 @@ app.get('/transferencia', (req, res) => {
     </head>
     <body>
       <div class="card">
-        <h2>Datos para Transferencia</h2>
+        <h2>Instrucciones de Pago</h2>
         <p>ID Free Fire: <b>${playerId}</b></p>
-        <p>Paquete: <b>${producto.nombre}</b></p> <div class="precio-box">Total a pagar: $${producto.precio} MXN</div>
+        <p>Paquete: <b>${producto.nombre}</b></p>
+        <div class="precio-box">Total a pagar: $${producto.precio} MXN</div>
 
+        <!-- Opción 1: Depósito BBVA -->
         <div class="banco-box">
-          <p>📱 <b>Banco / App:</b> ${DATOS_BANCARIOS.banco}</p>
-          <p>💳 <b>Tarjeta / Celular:</b></p>
-          <b>${DATOS_BANCARIOS.tarjetaOCelular}</b>
-          <p style="margin-top:10px;">🔢 <b>CLABE Interbancaria:</b></p>
-          <b>${DATOS_BANCARIOS.clabe}</b>
-          <p style="margin-top:10px;">👤 <b>Beneficiario:</b> ${DATOS_BANCARIOS.beneficiario}</p>
+          <p>🌷 <b>DEPÓSITO BBVA</b> 🌷</p>
+          <p>💳 Tarjeta: <b>${DATOS_BBVA.tarjeta}</b></p>
+          <p>👩‍💻 Beneficiario: ${DATOS_BBVA.beneficiario}</p>
+        </div>
+
+        <!-- Opción 2: Transferencia Nu -->
+        <div class="banco-box">
+          <p>🌷 <b>TRANSFERENCIA Nu</b> 🌷</p>
+          <p>💳 CLABE: <b>${DATOS_NU.clabe}</b></p>
+          <p>👩‍💻 Beneficiario: ${DATOS_NU.beneficiario}</p>
         </div>
 
         <form action="/procesar-recarga" method="POST" enctype="multipart/form-data">
@@ -223,7 +262,7 @@ app.get('/transferencia', (req, res) => {
           <label>Número de referencia o folio:</label>
           <input type="text" name="referencia" placeholder="Ej. 12345678" required>
 
-          <label>Sube foto de tu comprobante:</label>
+          <label>‼️ Mandar comprobante de pago (Foto):</label>
           <input type="file" name="comprobante" accept="image/*" required>
 
           <button type="submit" class="btn-confirmar">Ya realicé mi transferencia</button>
@@ -237,18 +276,21 @@ app.get('/transferencia', (req, res) => {
 });
 
 /**
- * 3. DESPACHO AUTOMÁTICO AL SUBIR COMPROBANTE Y PANTALLA DE ÉXITO
+ * ============================================================================
+ * RUTA 3: PROCESAMIENTO Y DESPACHO AUTOMÁTICO (POST /procesar-recarga)
+ * Recibe el comprobante, despacha a la API y muestra la confirmación al cliente.
+ * ============================================================================
  */
 app.post('/procesar-recarga', upload.single('comprobante'), async (req, res) => {
   const { playerId, prodKey, referencia } = req.body;
   const producto = PRODUCTOS[prodKey];
   if (!producto) return res.redirect('/');
 
-  // Despacha en automático a la API de Recargas América al mandar su comprobante
+  // Despacha automáticamente hacia la API de Recargas América al enviar la foto
   const resultado = await despacharApiRecargas(playerId, producto);
   let estadoActual = resultado.success ? '✅ Recarga Exitosa' : '❌ Error al despachar';
 
-  // Guarda la orden, la referencia y la foto en tu panel privado de admin
+  // Guarda la información en tu panel privado de administración
   pedidosAdmin.unshift({
     id: Date.now(),
     playerId,
@@ -266,7 +308,7 @@ app.post('/procesar-recarga', upload.single('comprobante'), async (req, res) => 
     <html lang="es">
     <head>
       <meta charset="UTF-8">
-      <title>Pago Exitoso - Monse_shop</title>
+      <title>Pago Confirmado - Monse_shop</title>
       <style>
         :root { --bg-color: #0b051e; --panel-bg: #160b36; --accent-purple: #9d4edd; --neon-cyan: #00f0ff; --text-white: #fff; --text-gray: #b9b3d1; }
         body { background-color: var(--bg-color); color: var(--text-white); padding: 20px; font-family: sans-serif; text-align: center; }
@@ -278,11 +320,11 @@ app.post('/procesar-recarga', upload.single('comprobante'), async (req, res) => 
     </head>
     <body>
       <div class="card">
-        <h2>⭐ ¡Pago Exitoso, Recarga Enviada! ⭐</h2>
+        <h2>⭐ ¡Pago Confirmado! ⭐</h2>
         <p>ID de Jugador: <b>${playerId}</b></p>
         <p>Referencia: <b>${referencia}</b></p>
-        <p>Estado: <b>Tu comprobante fue recibido y la recarga se mandó al juego en automático.</b></p>
-        <p><i>Gracias por tu compra en Monse_shop. ¡Tus diamantes ya van en camino!</i></p>
+        <p>Estado: <b style="color:#00f0ff;">Diamantes enviados a su cuenta exitosamente.</b></p>
+        <p><i>Gracias por tu compra en Monse_shop. ¡Tu recarga se procesó al minuto!</i></p>
         <a href="/" class="btn-volver">Hacer otra recarga</a>
       </div>
     </body>
@@ -291,8 +333,10 @@ app.post('/procesar-recarga', upload.single('comprobante'), async (req, res) => 
 });
 
 /**
- * 4. PANEL DE ADMINISTRACIÓN PRIVADO (GET /admin?pass=monse123)
- * Tu sección secreta con el historial, la foto del comprobante y el botón de "Volver a intentar".
+ * ============================================================================
+ * RUTA 4: PANEL DE ADMINISTRACIÓN PRIVADO (/admin?pass=monse123)
+ * Historial, comprobantes y botón de reintento ante cualquier detalle.
+ * ============================================================================
  */
 app.get('/admin', (req, res) => {
   const { pass } = req.query;
@@ -318,7 +362,7 @@ app.get('/admin', (req, res) => {
     <div style="background:#0b051e; padding:12px; margin-bottom:10px; border-radius:8px; border-left:4px solid ${p.estado.includes('Exitosa') ? '#00f0ff' : '#ff3366'}; font-size:13px; text-align:left;">
       <b>ID Free Fire:</b> ${p.playerId} <br>
       <b>Paquete:</b> ${p.producto} ($${p.precio} MXN) <br>
-      <b>Referencia:</b> ${p.referencia} \vert{} <b>Comprobante:</b>${p.tieneFoto} <br>
+      <b>Referencia:</b> ${p.referencia} | <b>Comprobante:</b> ${p.tieneFoto} <br>
       <b>Fecha:</b> ${p.fecha} <br>
       <b>Estado API:</b> <span style="color:${p.estado.includes('Exitosa') ? '#00f0ff' : '#ff3366'};">${p.estado}</span><br><br>
       
@@ -333,7 +377,7 @@ app.get('/admin', (req, res) => {
   for (const [key, prod] of Object.entries(PRODUCTOS)) {
     htmlAdminProductos += `
       <div style="background:#0b051e; padding:10px; margin-bottom:8px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; font-size:13px;">
-        <div><b>${prod.nombre}</b> -$${prod.precio} MXN</div>
+        <div><b>${prod.nombre}</b> - $${prod.precio} MXN</div>
         <form method="POST" action="/admin/actualizar" style="display:inline; margin:0;">
           <input type="hidden" name="key" value="${key}">
           <input type="number" name="nuevoPrecio" value="${prod.precio}" style="width:60px; padding:3px; background:#160b36; color:#fff; border:1px solid #9d4edd;">
@@ -358,5 +402,6 @@ app.get('/admin', (req, res) => {
     <body>
       <div class="container">
         <h2>💎 Panel de Administración Monse_shop 💎</h2>
-
         
+        <h3>📋 Historial de Recargas (Comprobantes y Reintentos)</h3>
+        <div sty
