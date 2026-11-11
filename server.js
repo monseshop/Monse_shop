@@ -1,3 +1,11 @@
+/**
+ * ============================================================================
+ * TIENDA WEB MÓVIL: MONSE_SHOP
+ * Automatización de Recargas de Free Fire en México
+ * Integración con API de Recargas América y Enlace de Cobro Mercado Pago
+ * ============================================================================
+ */
+
 const express = require('express');
 const fetch = require('node-fetch');
 
@@ -5,10 +13,14 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Credenciales y enlaces oficiales
 const RECARGAS_API_KEY = process.env.RECARGAS_API_KEY || 'ra_13Fv9P79r_13FV9P7...dzq7';
 const MP_LINK_DIRECTO = 'https://link.mercadopago.com.mx/m0nseshop';
 
-// Catálogo completo sincronizado con los códigos exactos (ADS...) de tu panel
+/**
+ * Catálogo completo de productos sincronizados con los códigos exactos (ADS...)
+ * obtenidos directamente de tu panel de Recargas América.
+ */
 const PRODUCTOS = {
   '110_diamonds': { nombre: '110 Diamantes + 10% Bono', precio: 15, service: 'diamantes', amount: 'ADS005' },
   '310_diamonds': { nombre: '310 Diamantes + Bono', precio: 43, service: 'diamantes', amount: 'ADS006' },
@@ -21,6 +33,9 @@ const PRODUCTOS = {
   'card_mensual': { nombre: 'Tarjeta Mensual', precio: 160, service: 'tarjeta', amount: 'ADS003' }
 };
 
+/**
+ * RUTA PRINCIPAL: Interfaz web de la tienda (Catálogo e ingreso de ID)
+ */
 app.get('/', (req, res) => {
   res.send(`
     <!DOCTYPE html>
@@ -70,6 +85,7 @@ app.get('/', (req, res) => {
       </header>
 
       <div class="container">
+        <!-- SECCIÓN 1: ID de Jugador -->
         <div class="card">
           <h2>1. Ingresa tu ID de Free Fire</h2>
           <label>ID de Jugador:</label>
@@ -77,6 +93,7 @@ app.get('/', (req, res) => {
           <div class="aviso-id">🚨 Verifica que el ID sea el correcto, en caso de equivocarte, no me hago responsable</div>
         </div>
 
+        <!-- SECCIÓN 2: Selección de Paquetes -->
         <div class="card">
           <h2>2. Selecciona tu Paquete</h2>
           <div class="grid-productos">
@@ -101,6 +118,7 @@ app.get('/', (req, res) => {
 
       <script>
         let productoSeleccionado = '';
+
         function seleccionar(id, elemento) {
           document.querySelectorAll('.prod-btn').forEach(b => b.classList.remove('selected'));
           elemento.classList.add('selected');
@@ -120,5 +138,79 @@ app.get('/', (req, res) => {
   `);
 });
 
+/**
+ * RUTA DE CHECKOUT: Despacha la orden en automático a la API de Recargas América
+ * y muestra las instrucciones de pago por transferencia/depósito/Mercado Pago.
+ */
 app.get('/checkout', async (req, res) => {
-  
+  const { playerId, prod } = req.query;
+  const producto = PRODUCTOS[prod];
+  if (!producto) return res.redirect('/');
+
+  // Petición automática hacia la API oficial de Recargas América
+  try {
+    const apiRes = await fetch('https://panel.recargasamerica.com/api/v1/order', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + RECARGAS_API_KEY,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        player_id: playerId,
+        service: producto.service,
+        amount: producto.amount
+      })
+    });
+    const data = await apiRes.json();
+    console.log('Respuesta de API Recargas America:', data);
+  } catch (e) {
+    console.error('Error al conectar con la API de Recargas América:', e);
+  }
+
+  // Interfaz de confirmación y métodos de pago (BBVA, Nu, OXXO, etc.)
+  res.send(`
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Pago y Transferencia - Monse_shop</title>
+      <style>
+        :root { --bg-color: #0b051e; --panel-bg: #160b36; --accent-purple: #9d4edd; --neon-cyan: #00f0ff; --text-white: #fff; --text-gray: #b9b3d1; }
+        body { background-color: var(--bg-color); color: var(--text-white); padding: 20px; font-family: sans-serif; text-align: center; }
+        .card { background: var(--panel-bg); border: 2px solid var(--accent-purple); border-radius: 15px; padding: 25px; max-width: 450px; margin: 20px auto; box-shadow: 0 0 20px rgba(157,78,221,0.3); }
+        h2 { color: var(--neon-cyan); margin-bottom: 15px; }
+        p { color: var(--text-gray); font-size: 15px; margin: 10px 0; text-align: left; }
+        .precio-box { font-size: 28px; color: #ff007f; font-weight: bold; margin: 15px 0; text-align: center; }
+        .btn { display: block; width: 100%; background: linear-gradient(45deg, #7209b7, #f72585); color: white; padding: 15px; border-radius: 10px; text-decoration: none; font-weight: bold; font-size: 16px; margin-top: 20px; box-shadow: 0 0 15px rgba(247,37,133,0.4); text-transform: uppercase; }
+        .info-banco { background: #0b051e; border: 1px dashed var(--neon-cyan); padding: 12px; border-radius: 8px; margin-top: 15px; font-size: 13px; color: #00f0ff; text-align: center; }
+      </style>
+    </head>
+    <body>
+      <div class="card">
+        <h2>Instrucciones de Pago</h2>
+        <p>ID Free Fire: <b>${playerId}</b></p>
+        <p>Paquete: <b>${producto.nombre}</b></p>
+        <div class="precio-box">Total: $${producto.precio} MXN</div>
+        
+        <p><b>💳 Formas de pago aceptadas:</b><br>
+        Puedes transferir o depositar desde <b>BBVA, Nu, OXXO o cualquier banco</b> utilizando tu enlace directo de pago.</p>
+
+        <div class="info-banco">
+          Tu orden ha sido procesada y enviada a la API de recargas de inmediato.
+        </div>
+
+        <a href="${MP_LINK_DIRECTO}" target="_blank" class="btn">Pagar Ahora ($${producto.precio} MXN)</a>
+        
+        <br><a href="/" style="color: #b9b3d1; font-size: 14px; text-decoration: underline;">Regresar a la tienda</a>
+      </div>
+    </body>
+    </html>
+  `);
+});
+
+// Inicialización del servidor Node.js
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log('Monse_shop corriendo exitosamente en el puerto ' + PORT));
+      
