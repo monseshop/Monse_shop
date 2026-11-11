@@ -2,7 +2,7 @@
  * ============================================================================
  * TIENDA WEB MÓVIL Y PANEL ADMIN: MONSE_SHOP
  * Automatización de Recargas Free Fire en México (API Recargas América)
- * Transferencia Directa (BBVA y Nu), Subida de Comprobantes y Panel Admin
+ * Transferencia Directa (BBVA y Nu), Comprobantes y Panel Admin
  * ============================================================================
  */
 
@@ -14,14 +14,14 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Configuración de multer para recibir las fotos de comprobantes de los clientes en memoria temporal
+// Configuración de multer para recibir las fotos de comprobantes en memoria temporal
 const upload = multer({ storage: multer.memoryStorage() });
 
 // Credenciales y configuraciones oficiales
 const RECARGAS_API_KEY = process.env.RECARGAS_API_KEY || 'ra_13Fv9P79r_13FV9P7dzq7';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'monse123'; // Contraseña de acceso a tu panel privado
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'monse123'; // Contraseña de tu panel privado
 
-// Tus datos bancarios reales para transferencias y depósitos
+// Tus datos bancarios exactos (BBVA y Nu)
 const DATOS_BBVA = {
   banco: 'BBVA',
   tarjeta: '4152314663647124',
@@ -82,7 +82,6 @@ async function despacharApiRecargas(playerId, producto) {
 /**
  * ============================================================================
  * RUTA 1: TIENDA PÚBLICA (GET /)
- * Catálogo, diseño morado neón, campo de ID y advertencia decorada con corazones y estrellas.
  * ============================================================================
  */
 app.get('/', (req, res) => {
@@ -205,7 +204,6 @@ app.get('/', (req, res) => {
 /**
  * ============================================================================
  * RUTA 2: PASARELA DE TRANSFERENCIA Y COMPROBANTE (GET /transferencia)
- * Muestra las cuentas de BBVA y Nu y el formulario para subir la foto y referencia.
  * ============================================================================
  */
 app.get('/transferencia', (req, res) => {
@@ -241,17 +239,19 @@ app.get('/transferencia', (req, res) => {
         <p>Paquete: <b>${producto.nombre}</b></p>
         <div class="precio-box">Total a pagar: $${producto.precio} MXN</div>
 
-        <!-- Opción 1: Depósito BBVA -->
+        <!-- Depósito BBVA -->
         <div class="banco-box">
-          <p>🌷 <b>DEPÓSITO BBVA</b> 🌷</p>
+          <p>🌷 <b>DEPÓSITO</b> 🌷</p>
           <p>💳 Tarjeta: <b>${DATOS_BBVA.tarjeta}</b></p>
+          <p>🏦 Banco: BBVA</p>
           <p>👩‍💻 Beneficiario: ${DATOS_BBVA.beneficiario}</p>
         </div>
 
-        <!-- Opción 2: Transferencia Nu -->
+        <!-- Transferencia Nu -->
         <div class="banco-box">
-          <p>🌷 <b>TRANSFERENCIA Nu</b> 🌷</p>
+          <p>🌷 <b>TRANSFERENCIA</b> 🌷</p>
           <p>💳 CLABE: <b>${DATOS_NU.clabe}</b></p>
+          <p>🏦 Banco: Nu</p>
           <p>👩‍💻 Beneficiario: ${DATOS_NU.beneficiario}</p>
         </div>
 
@@ -278,7 +278,6 @@ app.get('/transferencia', (req, res) => {
 /**
  * ============================================================================
  * RUTA 3: PROCESAMIENTO Y DESPACHO AUTOMÁTICO (POST /procesar-recarga)
- * Recibe el comprobante, despacha a la API y muestra la confirmación al cliente.
  * ============================================================================
  */
 app.post('/procesar-recarga', upload.single('comprobante'), async (req, res) => {
@@ -323,8 +322,8 @@ app.post('/procesar-recarga', upload.single('comprobante'), async (req, res) => 
         <h2>⭐ ¡Pago Confirmado! ⭐</h2>
         <p>ID de Jugador: <b>${playerId}</b></p>
         <p>Referencia: <b>${referencia}</b></p>
-        <p>Estado: <b style="color:#00f0ff;">Diamantes enviados a su cuenta exitosamente.</b></p>
-        <p><i>Gracias por tu compra en Monse_shop. ¡Tu recarga se procesó al minuto!</i></p>
+        <p>Estado: <b style="color:#00f0ff;">Diamantes enviados a su cuenta exitosamente al minuto.</b></p>
+        <p><i>Gracias por tu compra en Monse_shop. ¡Tu recarga se procesó de inmediato!</i></p>
         <a href="/" class="btn-volver">Hacer otra recarga</a>
       </div>
     </body>
@@ -335,7 +334,6 @@ app.post('/procesar-recarga', upload.single('comprobante'), async (req, res) => 
 /**
  * ============================================================================
  * RUTA 4: PANEL DE ADMINISTRACIÓN PRIVADO (/admin?pass=monse123)
- * Historial, comprobantes y botón de reintento ante cualquier detalle.
  * ============================================================================
  */
 app.get('/admin', (req, res) => {
@@ -404,4 +402,13 @@ app.get('/admin', (req, res) => {
         <h2>💎 Panel de Administración Monse_shop 💎</h2>
         
         <h3>📋 Historial de Recargas (Comprobantes y Reintentos)</h3>
-        <div sty
+        <div style="max-height: 300px; overflow-y: auto;">
+          ${htmlPedidos || '<p style="color:#b9b3d1; text-align:left;">No hay pedidos registrados.</p>'}
+        </div>
+
+        <h3>📦 Modificar Precios de Productos</h3>
+        <div style="max-height: 250px; overflow-y: auto;">
+          ${htmlAdminProductos}
+        </div>
+        
+        <br
