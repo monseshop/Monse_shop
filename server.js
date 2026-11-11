@@ -13,11 +13,11 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Clave API oficial de Recargas América y contraseña de Administrador
+// Credenciales oficiales
 const RECARGAS_API_KEY = process.env.RECARGAS_API_KEY || 'ra_13Fv9P79r_13FV9P7dzq7';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'monse123';
 
-// Tus datos bancarios oficiales
+// Datos bancarios oficiales
 const DATOS_BBVA = {
   banco: 'BBVA',
   tarjeta: '4152314663647124',
@@ -30,7 +30,7 @@ const DATOS_NU = {
   beneficiario: 'Montserrat Ramirez'
 };
 
-// Catálogo oficial completo (ADS001 - ADS010)
+// Catálogo completo de paquetes Free Fire
 let PRODUCTOS = {
   'card_semanal_basica': { nombre: 'Semanal Básica', precio: 9, service: 'tarjeta', amount: 'ADS001' },
   'card_semanal': { nombre: 'Tarjeta Semanal', precio: 42, service: 'tarjeta', amount: 'ADS002' },
@@ -45,13 +45,10 @@ let PRODUCTOS = {
 
 let pedidosAdmin = [];
 
-/**
- * FUNCIÓN CENTRAL: Despacho automático hacia la API de Recargas América
- */
+// Función para despachar a la API de Recargas América
 async function despacharApiRecargas(playerId, producto) {
   try {
     const authHeader = 'Bearer ' + RECARGAS_API_KEY.trim();
-    
     const apiRes = await fetch('https://panel.recargasamerica.com/api/v1/order', {
       method: 'POST',
       headers: {
@@ -67,24 +64,17 @@ async function despacharApiRecargas(playerId, producto) {
     });
     
     const data = await apiRes.json();
-    console.log('Respuesta API Recargas America:', data);
-    
     if (apiRes.ok && (data.success === true || data.status === 'success' || data.id)) {
       return { success: true, data };
     } else {
       return { success: false, error: data.error || data.message || 'Error en respuesta de API' };
     }
   } catch (e) {
-    console.error('Error al conectar con la API:', e);
     return { success: false, error: e.message };
   }
 }
 
-/**
- * ============================================================================
- * RUTA 1: TIENDA PÚBLICA (GET /)
- * ============================================================================
- */
+// 1. Tienda pública
 app.get('/', (req, res) => {
   let htmlProductos = '';
   for (const [key, prod] of Object.entries(PRODUCTOS)) {
@@ -169,7 +159,6 @@ app.get('/', (req, res) => {
           const playerId = document.getElementById('playerId').value;
           if (!playerId) { alert('Por favor ingresa tu ID de Free Fire'); return; }
           if (!productoSeleccionado) { alert('Por favor selecciona un paquete'); return; }
-
           window.location.href = '/transferencia?playerId=' + playerId + '&prod=' + productoSeleccionado;
         }
       </script>
@@ -178,11 +167,7 @@ app.get('/', (req, res) => {
   `);
 });
 
-/**
- * ============================================================================
- * RUTA 2: PASARELA DE DATOS BANCARIOS Y COMPROBANTE (GET /transferencia)
- * ============================================================================
- */
+// 2. Pasarela de pagos bancarios
 app.get('/transferencia', (req, res) => {
   const { playerId, prod } = req.query;
   const producto = PRODUCTOS[prod];
@@ -245,11 +230,7 @@ app.get('/transferencia', (req, res) => {
   `);
 });
 
-/**
- * ============================================================================
- * RUTA 3: PROCESAMIENTO Y VALIDACIÓN (POST /procesar-recarga)
- * ============================================================================
- */
+// 3. Procesamiento y registro de pedidos
 app.post('/procesar-recarga', async (req, res) => {
   const { playerId, prodKey, referencia } = req.body;
   const producto = PRODUCTOS[prodKey];
@@ -335,11 +316,7 @@ app.post('/procesar-recarga', async (req, res) => {
   }
 });
 
-/**
- * ============================================================================
- * RUTA 4: PANEL DE ADMINISTRACIÓN PRIVADO (/admin?pass=monse123)
- * ============================================================================
- */
+// 4. Panel de administración privado (/admin?pass=monse123)
 app.get('/admin', (req, res) => {
   const { pass } = req.query;
   if (pass !== ADMIN_PASSWORD) {
@@ -380,4 +357,22 @@ app.get('/admin', (req, res) => {
   for (const [key, prod] of Object.entries(PRODUCTOS)) {
     htmlAdminProductos += `
       <div style="background:#0b051e; padding:10px; margin-bottom:8px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; font-size:13px;">
-        <div><b>${prod.nombre}</b> - $${prod.pre
+        <div><b>${prod.nombre}</b> - $${prod.precio} MXN</div>
+        <form method="POST" action="/admin/actualizar" style="display:inline; margin:0;">
+          <input type="hidden" name="key" value="${key}">
+          <input type="number" name="nuevoPrecio" value="${prod.precio}" style="width:60px; padding:3px; background:#160b36; color:#fff; border:1px solid #9d4edd;">
+          <button type="submit" style="background:#9d4edd; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Cambiar</button>
+        </form>
+      </div>
+    `;
+  }
+
+  res.send(`
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+      <meta charset="UTF-8"><title>Panel Admin - Monse_shop</title>
+      <style>
+        body { background: #0b051e; color: #fff; font-family: sans-serif; padding: 20px; text-align: center; }
+        .container { max-width: 650px; margin: 0 auto; background: #160b36; padding: 25px; border-radius: 15px; border: 1px solid #9d4edd; }
+        h2 { color: #00f0ff; mar
