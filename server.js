@@ -257,11 +257,9 @@ app.post('/procesar-recarga', async (req, res) => {
 
   const fechaHoraActual = new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' });
 
-  // Despacha automáticamente hacia la API de Recargas América
   const resultado = await despacharApiRecargas(playerId, producto);
   let estadoActual = resultado.success ? '✅ Recarga Exitosa' : '❌ Error al despachar';
 
-  // Guarda la información completa en el panel privado de administración
   pedidosAdmin.unshift({
     id: Date.now(),
     playerId,
@@ -381,4 +379,5 @@ app.get('/admin', (req, res) => {
   let htmlAdminProductos = '';
   for (const [key, prod] of Object.entries(PRODUCTOS)) {
     htmlAdminProductos += `
-      <div style="background:#0b051e; padding:10px; margin-bottom:8px; border-radius
+      <div style="background:#0b051e; padding:10px; margin-bottom:8px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; font-size:13px;">
+        <div><b>${prod.nombre}</b> - $${prod.pre
