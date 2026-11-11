@@ -6,9 +6,9 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Credenciales configuradas correctamente
-const client = new MercadoPagoConfig({ accessToken: 'APP_USR-2830416303996790-111019-74f07e59bfae3d551e9b25121b6d1911-1211795601' });
-const RECARGAS_API_KEY = 'ra_13FV9P79r_13FV9P7...dzq7'; // Ajustado con tu clave
+// Lee las credenciales de manera segura desde las variables de entorno de Render
+const client = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN });
+const RECARGAS_API_KEY = process.env.RECARGAS_API_KEY || 'ra_13FV9P79r_13FV9P7...dzq7';
 
 // Precios oficiales de Monse_shop
 const PRODUCTOS = {
@@ -23,7 +23,6 @@ const PRODUCTOS = {
   'card_mensual': { nombre: 'Tarjeta Mensual', precio: 160, tipo: 'tarjeta', idArticulo: 'MENSUAL' }
 };
 
-// Página Web con diseño morado neón, móvil y optimizada
 app.get('/', (req, res) => {
   res.send(`
     <!DOCTYPE html>
@@ -130,7 +129,6 @@ app.get('/', (req, res) => {
   `);
 });
 
-// Ruta para crear el cobro en Mercado Pago
 app.post('/crear-preferencia', async (req, res) => {
   try {
     const { playerId, productoId } = req.body;
@@ -162,7 +160,6 @@ app.post('/crear-preferencia', async (req, res) => {
   }
 });
 
-// Ruta de éxito: Al pagar, despacha automáticamente la API de Recargas América
 app.get('/exito', async (req, res) => {
   const { playerId, prod } = req.query;
   const producto = PRODUCTOS[prod];
