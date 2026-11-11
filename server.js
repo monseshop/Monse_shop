@@ -1,14 +1,11 @@
 const express = require('express');
 const fetch = require('node-fetch');
-const { MercadoPagoConfig, Preference } = require('mercadopago');
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Lee las credenciales de manera segura desde las variables de entorno de Render
-const client = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN });
-const RECARGAS_API_KEY = process.env.RECARGAS_API_KEY || 'ra_13FV9P79r_13FV9P7...dzq7';
+const RECARGAS_API_KEY = process.env.RECARGAS_API_KEY || 'ra_13FV9P7...dzq7';
 
 // Precios oficiales de Monse_shop
 const PRODUCTOS = {
@@ -129,15 +126,22 @@ app.get('/', (req, res) => {
   `);
 });
 
+// Usamos la API REST directa con fetch para evitar bloqueos del SDK y manejar el token de producción de forma segura
 app.post('/crear-preferencia', async (req, res) => {
   try {
     const { playerId, productoId } = req.body;
     const producto = PRODUCTOS[productoId];
     if (!producto) return res.status(400).json({ error: 'Producto no válido' });
 
-    const preference = new Preference(client);
-    const result = await preference.create({
-      body: {
+    const accessToken = process.env.MP_ACCESS_TOKEN;
+
+    const mpResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`
+      },
+      body: JSON.stringify({
         items: [{
           title: producto.nombre + ' - ID: ' + playerId,
           quantity: 1,
@@ -150,10 +154,16 @@ app.post('/crear-preferencia', async (req, res) => {
           pending: 'https://' + req.get('host') + '/'
         },
         auto_return: 'approved'
-      }
+      })
     });
 
-    res.json({ init_point: result.init_point });
+    const data = await mpResponse.json();
+    if (data.init_point) {
+      res.json({ init_point: data.init_point });
+    } else {
+      console.error('MP Error:', data);
+      res.status(500).json({ error: 'Error de Mercado Pago' });
+    }
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Error al conectar con Mercado Pago' });
