@@ -1,18 +1,12 @@
 const express = require('express');
 const fetch = require('node-fetch');
-const mercadopago = require('mercadopago');
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Tu llave real de Recargas América configurada directamente
 const RECARGAS_API_KEY = process.env.RECARGAS_API_KEY || 'ra_13Fv9P79r_13FV9P7...dzq7';
 const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN;
-
-mercadopago.configure({
-  access_token: MP_ACCESS_TOKEN
-});
 
 const PRODUCTOS = {
   '110_diamonds': { nombre: '110 Diamantes', precio: 15, tipo: 'diamantes', cantidad: 110 },
@@ -141,23 +135,35 @@ app.post('/crear-preferencia', async (req, res) => {
     const host = req.get('host');
     const protocol = req.protocol;
 
-    let preference = {
-      items: [{
-        title: producto.nombre + ' - ID: ' + playerId,
-        quantity: 1,
-        unit_price: Number(producto.precio),
-        currency_id: 'MXN'
-      }],
-      back_urls: {
-        success: `${protocol}://${host}/exito?playerId=${playerId}&prod=${productoId}`,
-        failure: `${protocol}://${host}/`,
-        pending: `${protocol}://${host}/`
+    const mpResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${MP_ACCESS_TOKEN}`
       },
-      auto_return: 'approved'
-    };
+      body: JSON.stringify({
+        items: [{
+          title: producto.nombre + ' - ID: ' + playerId,
+          quantity: 1,
+          unit_price: Number(producto.precio),
+          currency_id: 'MXN'
+        }],
+        back_urls: {
+          success: `${protocol}://${host}/exito?playerId=${playerId}&prod=${productoId}`,
+          failure: `${protocol}://${host}/`,
+          pending: `${protocol}://${host}/`
+        },
+        auto_return: 'approved'
+      })
+    });
 
-    const response = await mercadopago.preferences.create(preference);
-    res.json({ init_point: response.body.init_point });
+    const data = await mpResponse.json();
+    if (data.init_point) {
+      res.json({ init_point: data.init_point });
+    } else {
+      console.error('MP Error:', data);
+      res.status(500).json({ error: 'Error al conectar con Mercado Pago' });
+    }
   } catch (error) {
     console.error('Error MP:', error);
     res.status(500).json({ error: 'Error al conectar con Mercado Pago' });
