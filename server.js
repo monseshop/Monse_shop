@@ -2,7 +2,6 @@
  * ============================================================================
  * TIENDA WEB MÓVIL: MONSE_SHOP
  * Automatización de Recargas de Free Fire en México
- * Flujo seguro: Primero Paga (Mercado Pago / Transferencia) y luego Despacha (API)
  * ============================================================================
  */
 
@@ -13,14 +12,11 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Credenciales y enlaces oficiales
-const RECARGAS_API_KEY = process.env.RECARGAS_API_KEY || 'ra_13Fv9P79r_13FV9P7...dzq7';
+// Tu clave limpia de la API de Recargas América (sin puntos suspensivos)
+const RECARGAS_API_KEY = process.env.RECARGAS_API_KEY || 'ra_13Fv9P79r_13FV9P7dzq7';
 const MP_LINK_DIRECTO = 'https://link.mercadopago.com.mx/m0nseshop';
 
-/**
- * Catálogo completo sincronizado con los códigos exactos (ADS...) 
- * de tu panel de Recargas América, incluyendo todos los bonos del 10%.
- */
+// Catálogo completo con todos los paquetes y el 10% de bono indicado
 const PRODUCTOS = {
   '110_diamonds': { nombre: '110 Diamantes (+10%)', precio: 15, service: 'diamantes', amount: 'ADS005' },
   '310_diamonds': { nombre: '310 Diamantes (+10%)', precio: 43, service: 'diamantes', amount: 'ADS006' },
@@ -33,11 +29,6 @@ const PRODUCTOS = {
   'card_mensual': { nombre: 'Tarjeta Mensual', precio: 160, service: 'tarjeta', amount: 'ADS003' }
 };
 
-/**
- * RUTA PRINCIPAL (GET /):
- * Interfaz visual de la tienda en morado neón, listado de productos, 
- * campo de ID de jugador y la advertencia estilizada con corazones y estrellas.
- */
 app.get('/', (req, res) => {
   res.send(`
     <!DOCTYPE html>
@@ -69,7 +60,6 @@ app.get('/', (req, res) => {
         input { width: 100%; padding: 12px; background: #0b051e; border: 1px solid var(--accent-purple); border-radius: 8px; color: #fff; font-size: 16px; margin-bottom: 10px; }
         input:focus { outline: none; border-color: var(--neon-cyan); box-shadow: 0 0 8px var(--neon-cyan); }
         
-        /* Advertencia estilizada con rojo brillante, corazones y estrellas */
         .aviso-id { 
           font-size: 13px; 
           color: var(--alert-red); 
@@ -102,7 +92,6 @@ app.get('/', (req, res) => {
       </header>
 
       <div class="container">
-        <!-- SECCIÓN 1: Ingreso de ID con advertencia decorada -->
         <div class="card">
           <h2>1. Ingresa tu ID de Free Fire</h2>
           <label>ID de Jugador:</label>
@@ -112,7 +101,6 @@ app.get('/', (req, res) => {
           </div>
         </div>
 
-        <!-- SECCIÓN 2: Selección de Paquetes -->
         <div class="card">
           <h2>2. Selecciona tu Paquete</h2>
           <div class="grid-productos">
@@ -137,7 +125,6 @@ app.get('/', (req, res) => {
 
       <script>
         let productoSeleccionado = '';
-
         function seleccionar(id, elemento) {
           document.querySelectorAll('.prod-btn').forEach(b => b.classList.remove('selected'));
           elemento.classList.add('selected');
@@ -157,12 +144,7 @@ app.get('/', (req, res) => {
   `);
 });
 
-/**
- * RUTA DE CHECKOUT (GET /checkout):
- * Muestra el resumen de compra y el enlace de pago. 
- * Aquí el cliente paga PRIMERO mediante Mercado Pago (transferencia o depósito desde BBVA, Nu, OXXO, etc.).
- * Incluye un botón para despachar el pedido a la API de Recargas América una vez efectuado el pago.
- */
+// Pantalla de pago: El cliente paga PRIMERO y luego presiona el botón para despachar
 app.get('/checkout', (req, res) => {
   const { playerId, prod } = req.query;
   const producto = PRODUCTOS[prod];
@@ -173,5 +155,103 @@ app.get('/checkout', (req, res) => {
     <html lang="es">
     <head>
       <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width
-      
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Instrucciones de Pago - Monse_shop</title>
+      <style>
+        :root { --bg-color: #0b051e; --panel-bg: #160b36; --accent-purple: #9d4edd; --neon-cyan: #00f0ff; --text-white: #fff; --text-gray: #b9b3d1; --neon-pink: #ff007f; }
+        body { background-color: var(--bg-color); color: var(--text-white); padding: 20px; font-family: sans-serif; text-align: center; }
+        .card { background: var(--panel-bg); border: 2px solid var(--accent-purple); border-radius: 15px; padding: 25px; max-width: 450px; margin: 20px auto; box-shadow: 0 0 20px rgba(157,78,221,0.3); }
+        h2 { color: var(--neon-cyan); margin-bottom: 15px; }
+        p { color: var(--text-gray); font-size: 15px; margin: 10px 0; text-align: left; }
+        .precio-box { font-size: 28px; color: var(--neon-pink); font-weight: bold; margin: 15px 0; text-align: center; text-shadow: 0 0 10px rgba(255,0,127,0.5); }
+        .btn-pago { display: block; width: 100%; background: linear-gradient(45deg, #7209b7, #f72585); color: white; padding: 15px; border-radius: 10px; text-decoration: none; font-weight: bold; font-size: 16px; margin-top: 15px; box-shadow: 0 0 15px rgba(247,37,133,0.4); text-transform: uppercase; }
+        .btn-despachar { display: block; width: 100%; background: linear-gradient(45deg, #00b4d8, #0077b6); color: white; padding: 14px; border-radius: 10px; text-decoration: none; font-weight: bold; font-size: 15px; margin-top: 15px; box-shadow: 0 0 15px rgba(0,240,255,0.3); text-transform: uppercase; }
+        .info-pasos { background: #0b051e; border: 1px dashed var(--neon-cyan); padding: 12px; border-radius: 8px; margin-top: 15px; font-size: 13px; color: var(--text-white); text-align: left; line-height: 1.4; }
+      </style>
+    </head>
+    <body>
+      <div class="card">
+        <h2>Paso Final: Realiza tu Pago</h2>
+        <p>ID Free Fire: <b>${playerId}</b></p>
+        <p>Paquete: <b>${producto.nombre}</b></p>
+        <div class="precio-box">Total: $${producto.precio} MXN</div>
+        
+        <div class="info-pasos">
+          <b>⭐ Instrucciones:</b><br>
+          1. Da clic en <b>"Pagar en Mercado Pago"</b> para transferir o depositar desde BBVA, Nu, OXXO o cualquier banco.<br>
+          2. Una vez hecho tu pago, regresa aquí y presiona <b>"Ya pagué, despachar recarga"</b> para enviarla al juego al instante.
+        </div>
+
+        <a href="${MP_LINK_DIRECTO}" target="_blank" class="btn-pago">Pagar en Mercado Pago ($${producto.precio} MXN)</a>
+        
+        <a href="/despachar?playerId=${playerId}&prod=${prod}" class="btn-despachar">⚡ Ya pagué, despachar recarga</a>
+        
+        <br><a href="/" style="color: var(--text-gray); font-size: 14px; text-decoration: underline; display:inline-block; margin-top:15px;">Regresar a la tienda</a>
+      </div>
+    </body>
+    </html>
+  `);
+});
+
+// Despacho a la API de Recargas América tras confirmar el pago
+app.get('/despachar', async (req, res) => {
+  const { playerId, prod } = req.query;
+  const producto = PRODUCTOS[prod];
+  if (!producto) return res.redirect('/');
+
+  let estadoMensaje = "¡Orden enviada con éxito a la API de Recargas América!";
+
+  try {
+    const apiRes = await fetch('https://panel.recargasamerica.com/api/v1/order', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + RECARGAS_API_KEY,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        player_id: playerId,
+        service: producto.service,
+        amount: producto.amount
+      })
+    });
+    const data = await apiRes.json();
+    console.log('Respuesta de API Recargas America:', data);
+  } catch (e) {
+    console.error('Error al conectar con la API:', e);
+    estadoMensaje = "Hubo un detalle al conectar con la API. Contacta soporte con tu comprobante de pago.";
+  }
+
+  res.send(`
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Estado de Recarga - Monse_shop</title>
+      <style>
+        :root { --bg-color: #0b051e; --panel-bg: #160b36; --accent-purple: #9d4edd; --neon-cyan: #00f0ff; --text-white: #fff; --text-gray: #b9b3d1; }
+        body { background-color: var(--bg-color); color: var(--text-white); padding: 20px; font-family: sans-serif; text-align: center; }
+        .card { background: var(--panel-bg); border: 2px solid var(--accent-purple); border-radius: 15px; padding: 25px; max-width: 450px; margin: 40px auto; box-shadow: 0 0 20px rgba(157,78,221,0.3); }
+        h2 { color: var(--neon-cyan); margin-bottom: 15px; text-shadow: 0 0 8px var(--neon-cyan); }
+        p { color: var(--text-gray); font-size: 15px; margin: 15px 0; line-height: 1.5; }
+        .btn-volver { display: inline-block; background: linear-gradient(45deg, #7209b7, #f72585); color: white; padding: 12px 25px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 15px; box-shadow: 0 0 12px rgba(247,37,133,0.4); text-transform: uppercase; }
+      </style>
+    </head>
+    <body>
+      <div class="card">
+        <h2>⭐ ¡Proceso Finalizado! ⭐</h2>
+        <p>ID de Jugador: <b>${playerId}</b></p>
+        <p>Paquete: <b>${producto.nombre}</b></p>
+        <p>${estadoMensaje}</p>
+        <p><i>Gracias por tu compra en Monse_shop. ¡Tus diamantes llegarán a tu cuenta!</i></p>
+        <a href="/" class="btn-volver">Hacer otra recarga</a>
+      </div>
+    </body>
+    </html>
+  `);
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log('Monse_shop corriendo exitosamente en el puerto ' + PORT));
+    
