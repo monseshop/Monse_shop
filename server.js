@@ -6,7 +6,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 const RECARGAS_API_KEY = process.env.RECARGAS_API_KEY || 'ra_13Fv9P79r_13FV9P7...dzq7';
-const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN;
+const MP_LINK_DIRECTO = 'https://link.mercadopago.com.mx/m0nseshop';
 
 const PRODUCTOS = {
   '110_diamonds': { nombre: '110 Diamantes', precio: 15, tipo: 'diamantes', cantidad: 110 },
@@ -103,22 +103,12 @@ app.get('/', (req, res) => {
           productoSeleccionado = id;
         }
 
-        async function iniciarPago() {
+        function iniciarPago() {
           const playerId = document.getElementById('playerId').value;
           if (!playerId) { alert('Por favor ingresa tu ID de Free Fire'); return; }
           if (!productoSeleccionado) { alert('Por favor selecciona un paquete'); return; }
 
-          const res = await fetch('/crear-preferencia', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ playerId, productoId: productoSeleccionado })
-          });
-          const data = await res.json();
-          if (data.init_point) {
-            window.location.href = data.init_point;
-          } else {
-            alert('Error al generar el pago. Intenta de nuevo.');
-          }
+          window.location.href = '/checkout?playerId=' + playerId + '&prod=' + productoSeleccionado;
         }
       </script>
     </body>
@@ -126,51 +116,50 @@ app.get('/', (req, res) => {
   `);
 });
 
-app.post('/crear-preferencia', async (req, res) => {
-  try {
-    const { playerId, productoId } = req.body;
-    const producto = PRODUCTOS[productoId];
-    if (!producto) return res.status(400).json({ error: 'Producto no válido' });
+app.get('/checkout', (req, res) => {
+  const { playerId, prod } = req.query;
+  const producto = PRODUCTOS[prod];
+  if (!producto) return res.redirect('/');
 
-    const host = req.get('host');
-    const protocol = req.protocol;
+  res.send(`
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Confirmación - Monse_shop</title>
+      <style>
+        :root { --bg-color: #0b051e; --panel-bg: #160b36; --accent-purple: #9d4edd; --neon-cyan: #00f0ff; --text-white: #fff; --text-gray: #b9b3d1; }
+        body { background-color: var(--bg-color); color: var(--text-white); padding: 20px; font-family: sans-serif; text-align: center; }
+        .card { background: var(--panel-bg); border: 2px solid var(--accent-purple); border-radius: 15px; padding: 25px; max-width: 450px; margin: 20px auto; box-shadow: 0 0 20px rgba(157,78,221,0.3); }
+        h2 { color: var(--neon-cyan); margin-bottom: 15px; }
+        p { color: var(--text-gray); font-size: 15px; margin: 10px 0; }
+        .precio-box { font-size: 28px; color: #ff007f; font-weight: bold; margin: 15px 0; }
+        .btn { display: block; width: 100%; background: linear-gradient(45deg, #00b4d8, #0077b6); color: white; padding: 15px; border-radius: 10px; text-decoration: none; font-weight: bold; font-size: 16px; margin-top: 15px; box-shadow: 0 0 15px rgba(0,180,216,0.4); }
+        .btn-confirmar { background: linear-gradient(45deg, #7209b7, #f72585); box-shadow: 0 0 15px rgba(247,37,133,0.4); margin-top: 15px; }
+      </style>
+    </head>
+    <body>
+      <div class="card">
+        <h2>Paso Final</h2>
+        <p>ID Free Fire: <b>${playerId}</b></p>
+        <p>Paquete: <b>${producto.nombre}</b></p>
+        <div class="precio-box">Total: $${producto.precio} MXN</div>
+        
+        <p style="text-align: left; margin-top: 15px;"><b>Instrucciones:</b><br>
+        1. Da clic en el botón de abajo para pagar en tu link oficial de Mercado Pago.<br>
+        2. Paga la cantidad exacta de <b>$${producto.precio} MXN</b>.<br>
+        3. Regresa aquí y presiona <b>"Recibir Diamantes"</b> para despachar tu recarga en automático.</p>
 
-    const mpResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${MP_ACCESS_TOKEN}`
-      },
-      body: JSON.stringify({
-        items: [{
-          title: producto.nombre + ' - ID: ' + playerId,
-          quantity: 1,
-          unit_price: Number(producto.precio),
-          currency_id: 'MXN'
-        }],
-        back_urls: {
-          success: `${protocol}://${host}/exito?playerId=${playerId}&prod=${productoId}`,
-          failure: `${protocol}://${host}/`,
-          pending: `${protocol}://${host}/`
-        },
-        auto_return: 'approved'
-      })
-    });
-
-    const data = await mpResponse.json();
-    if (data.init_point) {
-      res.json({ init_point: data.init_point });
-    } else {
-      console.error('MP Error:', data);
-      res.status(500).json({ error: 'Error al conectar con Mercado Pago' });
-    }
-  } catch (error) {
-    console.error('Error MP:', error);
-    res.status(500).json({ error: 'Error al conectar con Mercado Pago' });
-  }
+        <a href="${MP_LINK_DIRECTO}" target="_blank" class="btn">1. Pagar en Mercado Pago</a>
+        <a href="/ejecutar-recarga?playerId=${playerId}&prod=${prod}" class="btn btn-confirmar">2. Recibir Diamantes</a>
+      </div>
+    </body>
+    </html>
+  `);
 });
 
-app.get('/exito', async (req, res) => {
+app.get('/ejecutar-recarga', async (req, res) => {
   const { playerId, prod } = req.query;
   const producto = PRODUCTOS[prod];
 
@@ -196,7 +185,7 @@ app.get('/exito', async (req, res) => {
       if (data.success) {
         estadoRecarga = '¡Recarga aplicada exitosamente en el juego!';
       } else {
-        estadoRecarga = 'Aviso: ' + (data.error || 'Verificando saldo/transacción');
+        estadoRecarga = 'Aviso: ' + (data.error || 'Verificando transacción');
       }
     } catch (e) {
       console.error('Error al despachar API:', e);
@@ -206,7 +195,7 @@ app.get('/exito', async (req, res) => {
 
   res.send(`
     <html lang="es"><body style="background:#0b051e; color:white; text-align:center; padding-top:50px; font-family:sans-serif;">
-      <h1 style="color:#00f0ff;">¡Pago Confirmado! 💎</h1>
+      <h1 style="color:#00f0ff;">¡Recarga en Proceso! 💎</h1>
       <p style="font-size:18px; margin-top:20px;">ID de Jugador: <b>${playerId}</b></p>
       <p style="font-size:16px; margin-top:10px; color:#ff007f;"><b>${estadoRecarga}</b></p>
       <br><a href="/" style="background:#9d4edd; color:white; padding:12px 25px; text-decoration:none; border-radius:8px; font-weight:bold;">Regresar a la tienda</a>
@@ -216,3 +205,4 @@ app.get('/exito', async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log('Monse_shop corriendo en el puerto ' + PORT));
+      
