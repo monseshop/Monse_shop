@@ -6,10 +6,9 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const RECARGAS_API_KEY = process.env.RECARGAS_API_KEY || 'ra_13FV9P7...dzq7';
+const RECARGAS_API_KEY = process.env.RECARGAS_API_KEY || 'ra_13FV9P79r_13FV9P7...dzq7';
 const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN;
 
-// Configurar credenciales de Mercado Pago
 mercadopago.configure({
   access_token: MP_ACCESS_TOKEN
 });
@@ -123,7 +122,7 @@ app.get('/', (req, res) => {
           if (data.init_point) {
             window.location.href = data.init_point;
           } else {
-            alert('Error al generar el pago automático. Intenta de nuevo.');
+            alert('Error al generar el pago. Intenta de nuevo.');
           }
         }
       </script>
@@ -132,7 +131,6 @@ app.get('/', (req, res) => {
   `);
 });
 
-// Crea automáticamente la preferencia con el precio exacto de Mercado Pago
 app.post('/crear-preferencia', async (req, res) => {
   try {
     const { playerId, productoId } = req.body;
@@ -165,10 +163,11 @@ app.post('/crear-preferencia', async (req, res) => {
   }
 });
 
-// Al aprobarse el pago en Mercado Pago, redirige aquí y despacha automáticamente la recarga
 app.get('/exito', async (req, res) => {
   const { playerId, prod } = req.query;
   const producto = PRODUCTOS[prod];
+
+  let respuestaApi = 'Procesando...';
 
   if (producto) {
     try {
@@ -177,7 +176,8 @@ app.get('/exito', async (req, res) => {
         headers: {
           'Authorization': 'Bearer ' + RECARGAS_API_KEY,
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'User-Agent': 'MonseShop-App'
         },
         body: JSON.stringify({
           player_id: playerId,
@@ -186,7 +186,8 @@ app.get('/exito', async (req, res) => {
         })
       });
       const data = await apiRes.json();
-      console.log('Recarga enviada tras pago exitoso:', data);
+      console.log('Respuesta Recargas America:', data);
+      respuestaApi = JSON.stringify(data);
     } catch (e) {
       console.error('Error al despachar API:', e);
     }
@@ -194,9 +195,9 @@ app.get('/exito', async (req, res) => {
 
   res.send(`
     <html lang="es"><body style="background:#0b051e; color:white; text-align:center; padding-top:50px; font-family:sans-serif;">
-      <h1 style="color:#00f0ff;">¡Pago Exitoso y Recarga en Camino! 💎</h1>
-      <p style="font-size:18px; margin-top:20px;">Tu pago fue confirmado y tus diamantes se están enviando automáticamente a tu ID: <b>${playerId}</b></p>
-      <p style="color:#b9b3d1; margin-top:10px;">Revisa tu juego de Free Fire en unos momentos.</p>
+      <h1 style="color:#00f0ff;">¡Pago Exitoso y Recarga Solicitada! 💎</h1>
+      <p style="font-size:18px; margin-top:20px;">Tus diamantes se están enviando al ID: <b>${playerId}</b></p>
+      <p style="color:#b9b3d1; margin-top:10px; font-size:12px;">Estado API: ${respuestaApi}</p>
       <br><a href="/" style="background:#9d4edd; color:white; padding:12px 25px; text-decoration:none; border-radius:8px; font-weight:bold;">Regresar a la tienda</a>
     </body></html>
   `);
@@ -204,4 +205,3 @@ app.get('/exito', async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log('Monse_shop corriendo en el puerto ' + PORT));
-        
