@@ -50,10 +50,12 @@ let pedidosAdmin = [];
  */
 async function despacharApiRecargas(playerId, producto) {
   try {
+    const authHeader = 'Bearer ' + RECARGAS_API_KEY.trim();
+    
     const apiRes = await fetch('https://panel.recargasamerica.com/api/v1/order', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${RECARGAS_API_KEY}`,
+        'Authorization': authHeader,
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       },
@@ -379,4 +381,4 @@ app.get('/admin', (req, res) => {
   let htmlAdminProductos = '';
   for (const [key, prod] of Object.entries(PRODUCTOS)) {
     htmlAdminProductos += `
-      <div style="background:#0b051e; padding:10px; margin-bottom:8px; border-radius:8px; display:flex; justify-content:space-betwe
+      <div style="background:#0b051e; padding:10px; margin-bottom:8px; border-radius
