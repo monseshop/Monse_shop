@@ -7,15 +7,11 @@
  */
 
 const express = require('express');
-const multer = require('multer');
 const fetch = require('node-fetch');
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// Configuración de multer para procesar fotos de comprobantes en memoria
-const upload = multer({ storage: multer.memoryStorage() });
 
 // Clave API oficial de Recargas América y contraseña de Administrador
 const RECARGAS_API_KEY = process.env.RECARGAS_API_KEY || 'ra_13Fv9P79r_13FV9P7dzq7';
@@ -207,7 +203,7 @@ app.get('/transferencia', (req, res) => {
         .banco-box { background: #0b051e; border: 1px dashed var(--neon-cyan); padding: 12px; border-radius: 10px; margin: 10px 0; color: #fff; font-size: 13px; }
         .banco-box b { color: var(--neon-cyan); display: block; margin-top: 3px; font-size: 15px; }
         label { display: block; font-size: 13px; color: var(--text-gray); margin-top: 10px; }
-        input[type="text"], input[type="file"] { width: 100%; padding: 10px; background: #0b051e; border: 1px solid var(--accent-purple); border-radius: 8px; color: #fff; margin-top: 5px; }
+        input[type="text"] { width: 100%; padding: 10px; background: #0b051e; border: 1px solid var(--accent-purple); border-radius: 8px; color: #fff; margin-top: 5px; }
         .btn-confirmar { display: block; width: 100%; background: linear-gradient(45deg, #7209b7, #f72585); color: white; padding: 15px; border: none; border-radius: 10px; font-weight: bold; font-size: 16px; cursor: pointer; text-transform: uppercase; box-shadow: 0 0 15px rgba(247,37,133,0.4); text-align: center; margin-top: 20px; }
       </style>
     </head>
@@ -230,15 +226,12 @@ app.get('/transferencia', (req, res) => {
           <p>👩‍💻 Beneficiario: ${DATOS_NU.beneficiario}</p>
         </div>
 
-        <form action="/procesar-recarga" method="POST" enctype="multipart/form-data">
+        <form action="/procesar-recarga" method="POST">
           <input type="hidden" name="playerId" value="${playerId}">
           <input type="hidden" name="prodKey" value="${prod}">
           
           <label>Número de referencia o folio:</label>
           <input type="text" name="referencia" placeholder="Ej. 12345678" required>
-
-          <label>‼️ Mandar comprobante de pago (Foto obligatoria):</label>
-          <input type="file" name="comprobante" accept="image/*" required>
 
           <button type="submit" class="btn-confirmar">Ya realicé mi transferencia</button>
         </form>
@@ -255,16 +248,18 @@ app.get('/transferencia', (req, res) => {
  * RUTA 3: PROCESAMIENTO Y VALIDACIÓN (POST /procesar-recarga)
  * ============================================================================
  */
-app.post('/procesar-recarga', upload.single('comprobante'), async (req, res) => {
+app.post('/procesar-recarga', async (req, res) => {
   const { playerId, prodKey, referencia } = req.body;
   const producto = PRODUCTOS[prodKey];
   if (!producto) return res.redirect('/');
 
   const fechaHoraActual = new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' });
 
+  // Despacha automáticamente hacia la API de Recargas América
   const resultado = await despacharApiRecargas(playerId, producto);
   let estadoActual = resultado.success ? '✅ Recarga Exitosa' : '❌ Error al despachar';
 
+  // Guarda la información completa en el panel privado de administración
   pedidosAdmin.unshift({
     id: Date.now(),
     playerId,
@@ -272,7 +267,6 @@ app.post('/procesar-recarga', upload.single('comprobante'), async (req, res) => 
     precio: producto.precio,
     prodKey,
     referencia,
-    tieneFoto: req.file ? 'Sí (Comprobante adjunto)' : 'No',
     estado: estadoActual,
     errorDetalle: resultado.error || 'Ninguno',
     fechaHora: fechaHoraActual
@@ -327,7 +321,7 @@ app.post('/procesar-recarga', upload.single('comprobante'), async (req, res) => 
       <body>
         <div class="card">
           <h2>⚠️ Aviso Importante / Error al Enviar ⚠️</h2>
-          <p>Tu comprobante y referencia (<b>${referencia}</b>) se han guardado con éxito a las <b>${fechaHoraActual}</b>, pero hubo un detalle al procesar el envío automático.</p>
+          <p>Tu referencia (<b>${referencia}</b>) se ha guardado con éxito a las <b>${fechaHoraActual}</b>, pero hubo un detalle al procesar el envío automático.</p>
           <p style="color: #ff3366; font-size: 13px;"><b>Motivo:</b> ${resultado.error}</p>
           <p>Por favor, <b>contacta a soporte</b> inmediatamente para liberar tus diamantes.</p>
           
@@ -371,11 +365,18 @@ app.get('/admin', (req, res) => {
       <b>ID Free Fire:</b> ${p.playerId} <br>
       <b>Paquete:</b> ${p.producto} ($${p.precio} MXN) <br>
       <b>Folio / Referencia:</b> <span style="color:#00f0ff; font-weight:bold;">${p.referencia}</span> <br>
-      <b>Comprobante (Foto):</b> ${p.tieneFoto} <br>
       <b>Fecha y Hora:</b> ${p.fechaHora} <br>
       <b>Estado API:</b> <span style="color:${p.estado.includes('Exitosa') ? '#00f0ff' : '#ff3366'};">${p.estado}</span> <br>
       ${p.errorDetalle !== 'Ninguno' ? `<span style="color:#ffcc00; font-size:11px;">Error: ${p.errorDetalle}</span><br>` : ''}
       <br>
       <form action="/admin/reintentar" method="POST" style="display:inline;">
         <input type="hidden" name="pedidoId" value="${p.id}">
-        <button type="submit" style="background:#00b4d8; color:#fff; border:none
+        <button type="submit" style="background:#00b4d8; color:#fff; border:none; padding:6px 12px; border-radius:5px; cursor:pointer; font-weight:bold;">🔄 Volver a intentar</button>
+      </form>
+    </div>
+  `).join('');
+
+  let htmlAdminProductos = '';
+  for (const [key, prod] of Object.entries(PRODUCTOS)) {
+    htmlAdminProductos += `
+      <div style="background:#0b051e; padding:10px; margin-bottom:8px; border-radius:8px; display:flex; justify-content:space-betwe
